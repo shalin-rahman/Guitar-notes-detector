@@ -1,80 +1,48 @@
-import numpy as np
-import pyaudio
-import aubio
-
-# Audio setup
-SAMPLE_RATE = 44100
-BUFFER_SIZE = 1024
-TOLERANCE = 0.8
-
-# Create pitch detector
-pitch_detector = aubio.pitch("default", BUFFER_SIZE * 2, BUFFER_SIZE, SAMPLE_RATE)
-pitch_detector.set_unit("Hz")
-pitch_detector.set_tolerance(TOLERANCE)
-
-# Initialize PyAudio
-p = pyaudio.PyAudio()
-stream = p.open(
-    format=pyaudio.paFloat32,
-    channels=1,
-    rate=SAMPLE_RATE,
-    input=True,
-    frames_per_buffer=BUFFER_SIZE
-)
-
-# Note frequency conversion
-NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-def frequency_to_note(freq):
-    """Convert frequency to note name and octave"""
-    if freq == 0:
-        return None
-    
-    # Calculate MIDI note number
-    midi_note = 69 + 12 * np.log2(freq / 440.0)
-    # Get note name and octave
-    note_index = int(round(midi_note) % 12)
-    octave = int(round(midi_note) // 12 - 1)
-    
-    return f"{NOTE_NAMES[note_index]}{octave}"
-
-print("Listening for guitar notes... (Press Ctrl+C to stop)")
-
+import os
+import uvicorn
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+import shutil
 try:
-    while True:
-        # Read audio buffer
-        audio_data = np.frombuffer(
-            stream.read(BUFFER_SIZE, exception_on_overflow=False),
-            dtype=np.float32
-        )
+    from app.engine import AudioEngine
+except ImportError:
+    from engine import AudioEngine
+
+
+app = FastAPI(title="StellarTuner API")
+engine = AudioEngine()
+
+# Mount static files
+static_path = os.path.join(os.path.dirname(__file__), "static")
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+async def get_index():
+    with open(os.path.join(static_path, "index.html"), "r") as f:
+        return f.read()
+
+@app.post("/analyze")
+async def analyze_file(file: UploadFile = File(...)):
+    """Analyze an uploaded audio file and return detected notes"""
+    if not file.content_type.startswith("audio/"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an audio file.")
+    
+    # Save temporary file
+    temp_path = f"temp_{file.filename}"
+    try:
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
         
-        # Detect pitch
-        frequency = pitch_detector(audio_data)[0]
-        confidence = pitch_detector.get_confidence()
-        
-        # Convert to note
-        if confidence > 0.7 and frequency > 50:  # Filter out low confidence/noise
-            note = frequency_to_note(frequency)
-            print(f"Detected: {note} ({frequency:.1f} Hz) | Confidence: {confidence:.2f}")
-except KeyboardInterrupt:
-    print("\nStopped listening")
-finally:
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+        # Analyze
+        results = engine.analyze_file(temp_path)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
-def detect_notes_in_file(filename):
-    """Detect notes in an audio file"""
-    y, sr = librosa.load(filename, sr=None)
-    # Detect pitches
-    pitches, magnitudes = librosa.piptrack(y=y, sr=sr)
-    # Find dominant pitch in each frame
-    for t in range(pitches.shape[1]):
-        index = magnitudes[:, t].argmax()
-        pitch = pitches[index, t]
-        if pitch > 0:
-            note = frequency_to_note(pitch)
-            print(f"At {t/10:.1f}s: {note} ({pitch:.1f} Hz)")
-
-# Usage:
-# detect_notes_in_file("guitar_note.wav")
-
+if __name__ == "__main__":
+    print("Starting StellarTuner on http://localhost:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000)

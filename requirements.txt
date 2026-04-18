@@ -1,0 +1,7 @@
+numpy
+aubio
+pyaudio
+fastapi
+uvicorn
+python-multipart
+librosa

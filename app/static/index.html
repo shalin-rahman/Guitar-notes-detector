@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StellarTuner - Guitar Note Detector</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="dark-mode">
+    <div class="glass-container">
+        <header>
+            <div class="logo">
+                <h1>StellarTuner</h1>
+            </div>
+            <div class="status-badge" id="mic-status">Microphone Off</div>
+        </header>
+
+        <main>
+            <section class="visualizer-section">
+                <canvas id="waveform"></canvas>
+                <div class="tuner-gauge">
+                    <div class="gauge-background">
+                        <div class="tick flat"></div>
+                        <div class="tick perfect"></div>
+                        <div class="tick sharp"></div>
+                    </div>
+                    <div class="needle" id="needle"></div>
+                    <div class="note-display">
+                        <span id="current-note">--</span>
+                        <span id="current-freq">0.0 Hz</span>
+                        <div id="current-tab" style="font-size: 0.9rem; color: var(--accent); margin-top: 5px;"></div>
+                    </div>
+                    <div class="live-chord-display">
+                        <span class="chord-label">Estimated Chord: </span>
+                        <span id="live-chord" class="chord-value">None</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="controls">
+                <button id="start-btn" class="primary-btn">Start Detection</button>
+                <button id="stop-btn" class="secondary-btn" disabled>Stop</button>
+                
+                <div class="settings-mini">
+                    <label>Sensitivity</label>
+                    <input type="range" id="sensitivity" min="0" max="100" value="80">
+                </div>
+            </section>
+
+            <section class="history-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h3 style="margin: 0;">Live Stream & History</h3>
+                    <button id="save-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px;">Save Log</button>
+                </div>
+                <div class="scrolling-ticker-wrapper">
+                    <div class="scrolling-ticker" id="scrolling-ticker">
+                        <!-- Scrolling items appended here -->
+                    </div>
+                </div>
+                <div class="history-list" id="history-list">
+                    <!-- History items will appear here -->
+                    <div class="empty-state">No notes detected yet. Play something!</div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="file-upload-zone" id="drop-zone">
+                <p>Drag & Drop Audio File to Analyze</p>
+                <input type="file" id="file-input" hidden accept="audio/*">
+            </div>
+        </footer>
+    </div>
+
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
