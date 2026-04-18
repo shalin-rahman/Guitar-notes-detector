@@ -3,74 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AhiChord - Guitar Note Detector</title>
+    <title>Ahordian - Guitar Note Detector</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
 <body class="dark-mode">
     <div class="glass-container">
         <header>
             <div class="logo">
-                <h1>AhiChord</h1>
+                <h1>Ahordian</h1>
             </div>
             <div class="status-badge" id="mic-status">Microphone Off</div>
         </header>
 
-        <main>
-            <section class="visualizer-section">
-                <canvas id="waveform"></canvas>
-                <div class="tuner-gauge">
-                    <div class="gauge-background">
-                        <div class="tick flat"></div>
-                        <div class="tick perfect"></div>
-                        <div class="tick sharp"></div>
+        <main class="main-layout">
+            
+            <!-- LEFT PANEL: Visualizer & History -->
+            <div class="left-panel">
+                
+                <section class="visualizer-section">
+                    <canvas id="waveform" class="visualizer-canvas"></canvas>
+                    
+                    <div class="tuner-physics-module">
+                        <div class="gauge-background">
+                            <div class="tick flat"></div>
+                            <div class="tick perfect"></div>
+                            <div class="tick sharp"></div>
+                        </div>
+                        <div class="needle" id="needle"></div>
                     </div>
-                    <div class="needle" id="needle"></div>
-                    <div class="note-display">
-                        <span id="current-note">--</span>
-                        <span id="current-freq">0.0 Hz</span>
-                        <div id="current-tab" style="font-size: 0.9rem; color: var(--accent); margin-top: 5px;"></div>
-                    </div>
-                    <div class="live-chord-display">
-                        <span class="chord-label">Estimated Chord: </span>
-                        <span id="live-chord" class="chord-value">None</span>
-                    </div>
-                </div>
-            </section>
 
-            <section class="controls">
+                    <div class="note-display-module">
+                        <div class="note-wrap">
+                            <span id="current-note" class="massive-note western-note">--</span>
+                            <span class="divider">|</span>
+                            <span id="current-sargam" class="massive-note sargam-note">-</span>
+                        </div>
+                        <span id="current-freq" class="metric-label">0.0 Hz</span>
+                        <div id="current-tab" class="tab-label"></div>
+                        
+                        <div class="live-chord-display">
+                            <span class="chord-label">Estimated Chord: </span>
+                            <span id="live-chord" class="chord-value">None</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="history-section">
+                    <div class="history-header">
+                        <h3>Live Stream & History</h3>
+                        <div class="history-actions">
+                            <button id="save-btn" class="secondary-btn small-btn">Save Log</button>
+                            <label for="file-input" class="secondary-btn small-btn file-label">Upload File</label>
+                            <input type="file" id="file-input" hidden accept="audio/*">
+                        </div>
+                    </div>
+                    
+                    <div class="last10-module">
+                        <h4>Fast Buffer (Last 10 Nodes)</h4>
+                        <div id="last10-list">
+                            <!-- Last 10 stable nodes -->
+                        </div>
+                    </div>
+
+                    <div class="scrolling-ticker-wrapper">
+                        <div class="scrolling-ticker" id="scrolling-ticker">
+                            <!-- Scrolling items appended here -->
+                        </div>
+                    </div>
+
+                    <div class="history-list-module" id="history-list">
+                        <div class="empty-state">No notes detected yet. Play something!</div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- RIGHT PANEL: Controls -->
+            <section class="controls-panel">
                 <button id="start-btn" class="primary-btn">Start Detection</button>
                 <button id="stop-btn" class="secondary-btn" disabled>Stop</button>
                 
-                <div class="settings-mini">
-                    <label>Sensitivity</label>
+                <div class="settings-mini spacer-top">
+                    <label for="sensitivity">Mic Sensitivity (Software Noise Gate)</label>
                     <input type="range" id="sensitivity" min="0" max="100" value="80">
                 </div>
-            </section>
 
-            <section class="history-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="margin: 0;">Live Stream & History</h3>
-                    <button id="save-btn" class="secondary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px;">Save Log</button>
+                <div class="settings-mini spacer-top">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="hw-noise-suppress" checked>
+                        Hardware Noise Suppression
+                    </label>
                 </div>
-                <div class="scrolling-ticker-wrapper">
-                    <div class="scrolling-ticker" id="scrolling-ticker">
-                        <!-- Scrolling items appended here -->
-                    </div>
+
+                <div class="settings-mini spacer-top">
+                    <label for="sa-root">Sargam Root (Sa = S):</label>
+                    <select id="sa-root" class="styled-input pointer">
+                        <option value="C">C</option>
+                        <option value="C#">C#</option>
+                        <option value="D">D</option>
+                        <option value="D#">D#</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F#</option>
+                        <option value="G">G</option>
+                        <option value="G#">G#</option>
+                        <option value="A">A</option>
+                        <option value="A#">A#</option>
+                        <option value="B">B</option>
+                    </select>
                 </div>
-                <div class="history-list" id="history-list">
-                    <!-- History items will appear here -->
-                    <div class="empty-state">No notes detected yet. Play something!</div>
+                
+                <div class="settings-mini spacer-top">
+                    <label for="sa-symbols">Sargam Notation Map:</label>
+                    <input type="text" id="sa-symbols" class="styled-input mono" value="S, S', R, R', G, M, M', P, P', D, D', N">
+                </div>
+
+                <div id="drop-zone" class="drop-zone-module">
+                    Drag & Drop Audio File to Analyze Server-Side
                 </div>
             </section>
         </main>
-
-        <footer>
-            <div class="file-upload-zone" id="drop-zone">
-                <p>Drag & Drop Audio File to Analyze</p>
-                <input type="file" id="file-input" hidden accept="audio/*">
-            </div>
-        </footer>
     </div>
 
     <div class="background-blobs">
@@ -79,6 +133,10 @@
         <div class="blob blob-3"></div>
     </div>
 
+    <!-- Keep dropzone accessible for JS bindings -->
+    <script>
+        // Ensure styling overrides existing CSS specificity safely
+    </script>
     <script src="/static/app.js"></script>
 </body>
 </html>

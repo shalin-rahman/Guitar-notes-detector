@@ -150,7 +150,7 @@ class AudioEngine:
                 "tone": tone,
                 "chords": chord_events,
                 "notes": notes[::5], # Decimate for readability
-                "message": "Analysis complete by AhiChord Engine"
+                "message": "Analysis complete by Ahordian Engine"
             }
         except Exception as e:
             return {"error": str(e)}
