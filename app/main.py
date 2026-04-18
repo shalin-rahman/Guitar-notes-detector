@@ -10,7 +10,7 @@ except ImportError:
     from engine import AudioEngine
 
 
-app = FastAPI(title="StellarTuner API")
+app = FastAPI(title="AhiChord API")
 engine = AudioEngine()
 
 # Mount static files
@@ -44,5 +44,5 @@ async def analyze_file(file: UploadFile = File(...)):
             os.remove(temp_path)
 
 if __name__ == "__main__":
-    print("Starting StellarTuner on http://localhost:8000")
+    print("Starting AhiChord on http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)

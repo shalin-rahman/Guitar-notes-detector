@@ -281,7 +281,7 @@ function stopDetection() {
 }
 
 saveBtn.addEventListener('click', () => {
-    let content = "StellarTuner Transcription Export\n=============================\n\n";
+    let content = "AhiChord Transcription Export\n=============================\n\n";
     const items = historyList.querySelectorAll('.history-item');
     if (items.length === 0) {
         alert("No transcription data to save yet.");

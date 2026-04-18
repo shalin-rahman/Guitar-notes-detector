@@ -1,4 +1,4 @@
-# StellarTuner
+# AhiChord
 
 A premium, real-time guitar note detector and transcription engine.
 
