@@ -6,6 +6,7 @@ import UIManager from './UIManager.js';
 import FileManager from './FileManager.js';
 import AudioPlayer from './AudioPlayer.js';
 import FretboardManager from './FretboardManager.js';
+import CircleManager from './CircleManager.js';
 
 class App {
     constructor() {
@@ -58,6 +59,7 @@ class App {
         this.tracker = new TrackingManager(this.elements);
         this.ui = new UIManager(this.elements, this.tracker);
         this.fretboard = new FretboardManager('guitar-fretboard');
+        this.circleManager = new CircleManager('circle-container', this);
         this.player = null;
 
         this.bindEvents();

@@ -701,3 +701,174 @@ input[type=range] { width: 100%; }
 }
 
 .drop-zone-module:hover { border-color: var(--accent); color: var(--accent); background: rgba(255, 255, 255, 0.02); }
+
+/* CIRCLE OF FIFTHS STYLES */
+.circle-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+}
+
+.circle-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+}
+
+.cof-svg {
+    width: 100%;
+    height: auto;
+    max-width: 500px;
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.4));
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cof-segment {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cof-segment:hover {
+    fill: rgba(255, 215, 0, 0.2);
+    /* Gold highlight */
+}
+
+.cof-segment.active {
+    fill: rgba(255, 215, 0, 0.4);
+    stroke: var(--primary);
+    stroke-width: 3;
+}
+
+.cof-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    fill: var(--text-color);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.cof-min-text {
+    font-size: 14px;
+    font-weight: 400;
+    fill: var(--text-muted);
+}
+
+.cof-text.active {
+    fill: #ffffff;
+    font-weight: 800;
+    text-shadow: 0 0 8px var(--primary);
+}
+
+.cof-center-text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    fill: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.circle-info-panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+    border-radius: 16px;
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.circle-info-panel h3 {
+    margin: 0 0 15px 0;
+    color: var(--primary);
+    font-size: 1.5rem;
+}
+
+.circle-info-panel p {
+    margin: 8px 0;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.circle-info-panel strong {
+    color: var(--text-color);
+}
+
+.cof-actions {
+    margin-top: 20px;
+}
+
+/* Overflow Fix for Circle of Fifths Screen */
+#circle-screen {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-bottom: 60px !important;
+    height: 100%;
+}
+
+.circle-page {
+    height: auto !important;
+    min-height: min-content;
+}
+
+/* Chord and CAGED Button Styles */
+.cof-chord-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+.cof-chord-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    font-family: 'Outfit', sans-serif;
+    min-width: 60px;
+}
+.cof-chord-btn:hover {
+    background: rgba(255,215,0,0.2);
+    border-color: #ffd700;
+    transform: translateY(-2px);
+}
+.caged-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 5px;
+}
+.caged-btn {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s;
+    font-family: 'Outfit', sans-serif;
+}
+.caged-btn:hover, .caged-btn.active {
+    background: var(--primary);
+    color: #000;
+    font-weight: 800;
+}

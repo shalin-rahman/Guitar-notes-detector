@@ -208,16 +208,24 @@
                         <div class="fb-subtitle">Interactive Key & Harmony Explorer</div>
                     </div>
                 </div>
-                <div class="circle-container" id="circle-container">
-                    <!-- SVG built by JS will go here -->
-                </div>
-                <div class="circle-info-panel" id="circle-info-panel">
-                    <h3 id="cof-key-title">Select a Key</h3>
-                    <p id="cof-key-sig">--</p>
-                    <p id="cof-relative-minor">--</p>
-                    <div class="cof-actions">
-                        <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Major Scale</button>
+                <div class="circle-content-row" style="display: flex; flex-direction: row; gap: 40px; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap;">
+                    <div class="circle-container" id="circle-container" style="flex: 1; min-width: 300px; max-width: 500px;">
+                        <!-- SVG built by JS will go here -->
                     </div>
+                    <div class="circle-info-panel" id="circle-info-panel" style="flex: 1; min-width: 300px; max-width: 600px; background: var(--glass-bg); padding: 20px; border-radius: 12px;">
+                        <h3 id="cof-key-title" style="margin-top: 0;">Select a Key</h3>
+                        <p id="cof-key-sig">--</p>
+                        <p id="cof-relative-minor">--</p>
+                        <p id="cof-diatonic-chords">--</p>
+                        <div class="cof-actions">
+                            <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Full sequence on Main Fretboard</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cof-fb-wrapper" style="width: 100%; max-width: 1100px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-top: 20px;">
+                    <h4 style="text-align: center; color: var(--text-muted); margin-top: 0;">Key Scale Layout</h4>
+                    <div id="cof-fretboard" class="fretboard-svg-container"></div>
                 </div>
             </div>
         </main>

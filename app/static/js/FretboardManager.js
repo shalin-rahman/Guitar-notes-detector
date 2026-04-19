@@ -139,10 +139,15 @@ export default class FretboardManager {
         return positions.sort((a, b) => a.fret - b.fret)[0];
     }
 
-    showScale(noteNames) {
+    showScale(noteNames, bounds = null) {
         this.persistentNotes = [];
         for (let s = 0; s < this.strings.length; s++) {
             for (let f = 0; f <= this.numFrets; f++) {
+                if (bounds && (f < bounds.min || f > bounds.max)) {
+                    // Open strings are sometimes played in CAGED, but strict bounding is visually clearer
+                    if (f !== 0) continue; 
+                    if (f === 0 && bounds.min > 3) continue; // Only keep open strings if bounds are close
+                }
                 const currentNote = this.getNoteAt(s, f);
                 if (!currentNote) continue;
                 if (noteNames.includes(currentNote.replace(/[0-9]/g, ''))) {
