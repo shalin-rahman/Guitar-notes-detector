@@ -51,7 +51,6 @@ class AudioEngine:
             note_index = int(round(midi_note) % 12)
             octave = int(round(midi_note) // 12 - 1)
             return f"{NOTE_NAMES[note_index]}{octave}"
-            return f"{NOTE_NAMES[note_index]}{octave}"
         except Exception:
             return None
 

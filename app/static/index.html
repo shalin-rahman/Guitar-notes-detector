@@ -1,31 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ahordian - Guitar Note Detector</title>
+    <title>Ahordian — Guitar Note Detector & Fretboard Assistant</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/png" href="/static/logo.png">
+    <link rel="apple-touch-icon" href="/static/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 </head>
+
 <body class="dark-mode">
     <div class="glass-container">
         <header>
             <div class="logo" style="display: flex; align-items: center; gap: 15px;">
-                <img src="/static/logo.png" alt="Ahordian Acoustic Logo" style="height: 40px; mix-blend-mode: screen; filter: drop-shadow(0px 0px 8px rgba(192,192,192,0.4));">
+                <img src="/static/logo.png" alt="Ahordian Acoustic Logo"
+                    style="height: 40px; mix-blend-mode: screen; filter: drop-shadow(0px 0px 8px rgba(192,192,192,0.4));">
                 <h1>Ahordian</h1>
             </div>
+            <nav class="main-nav">
+                <button class="nav-btn active" data-target="detector-screen">Detector</button>
+                <button class="nav-btn" data-target="fretboard-screen">Fretboard</button>
+                <button class="nav-btn" data-target="circle-screen">Circle of 5ths</button>
+            </nav>
             <div class="status-badge" id="mic-status">Microphone Off</div>
         </header>
 
-        <main class="main-layout">
-            
+        <main class="main-layout screen active" id="detector-screen">
+
             <!-- LEFT PANEL: Visualizer & History -->
             <div class="left-panel">
-                
+
                 <section class="visualizer-section">
                     <canvas id="waveform" class="visualizer-canvas"></canvas>
-                    
+
                     <div class="tuner-physics-module">
                         <div class="gauge-background">
                             <div class="tick flat"></div>
@@ -43,7 +52,7 @@
                         </div>
                         <span id="current-freq" class="metric-label">0.0 Hz</span>
                         <div id="current-tab" class="tab-label"></div>
-                        
+
                         <div class="live-chord-display">
                             <span class="chord-label">Estimated Chord: </span>
                             <span id="live-chord" class="chord-value">None</span>
@@ -60,7 +69,7 @@
                             <input type="file" id="file-input" hidden accept="audio/*">
                         </div>
                     </div>
-                    
+
                     <div class="last10-module">
                         <h4>Fast Buffer (Last 10 Nodes)</h4>
                         <div id="last10-list">
@@ -85,7 +94,7 @@
             <section class="controls-panel">
                 <button id="start-btn" class="primary-btn">Start Detection</button>
                 <button id="stop-btn" class="secondary-btn" disabled>Stop</button>
-                
+
                 <div class="settings-mini spacer-top">
                     <label for="sensitivity">Mic Sensitivity (Software Noise Gate)</label>
                     <input type="range" id="sensitivity" min="0" max="100" value="80">
@@ -115,20 +124,102 @@
                         <option value="B">B</option>
                     </select>
                 </div>
-                
+
                 <div class="settings-mini spacer-top">
                     <label for="sa-symbols">Sargam Notation Map:</label>
-                    <input type="text" id="sa-symbols" class="styled-input mono" value="S, S', R, R', G, M, M', P, P', D, D', N">
+                    <input type="text" id="sa-symbols" class="styled-input mono"
+                        value="S, S', R, R', G, M, M', P, P', D, D', N">
                 </div>
 
                 <div id="drop-zone" class="drop-zone-module">
                     Drag & Drop Audio File to Analyze Server-Side
                 </div>
 
-                <div style="text-align: center; margin-top: 10px; padding-bottom: 5px; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8; letter-spacing: 0.5px;">
-                    Experimental Build | Developed by <span style="color: var(--primary); font-weight: 800;">Shalin</span>
+                <div
+                    style="text-align: center; margin-top: 10px; padding-bottom: 5px; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8; letter-spacing: 0.5px;">
+                    Experimental Build | Developed by <span
+                        style="color: var(--primary); font-weight: 800;">Shalin</span>
                 </div>
             </section>
+        </main>
+
+        <!-- AHIYAN'S FRETBOARD SCREEN -->
+        <main class="screen" id="fretboard-screen">
+            <div class="fb-page">
+                <!-- ROW 1: Controls -->
+                <div class="fb-topbar">
+                    <div class="fb-topbar-controls" style="width: 100%; display: flex; justify-content: flex-end;">
+                        <select id="tuning-select" class="styled-input pointer fb-select"></select>
+                        <label class="checkbox-label compact">
+                            <input type="checkbox" id="toggle-overlay"> Overlay
+                        </label>
+                        <button id="clear-overlay-btn" class="secondary-btn small-btn">Clear</button>
+                        <div id="sound-toggle" class="sound-control-btn active" title="Toggle Sound">
+                            <span class="speaker-icon">🔊</span>
+                            <div class="playing-waves"><span></span><span></span><span></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 2: Fretboard -->
+                <div class="fb-board">
+                    <div id="guitar-fretboard" class="fretboard-svg-container"></div>
+                </div>
+
+                <!-- ROW 3: Input + Info -->
+                <div class="fb-input-row">
+                    <input type="text" id="manual-note-input" placeholder="e.g. C4 or সা" class="styled-input">
+                    <button id="play-note-btn" class="primary-btn small-btn">Play</button>
+                    <div id="position-info" class="fb-info-text">Select a note or scale</div>
+                </div>
+
+                <!-- ROW 4: Scale + Pattern Buttons -->
+                <div class="fb-buttons-row">
+                    <div class="fb-btn-group">
+                        <span class="fb-btn-label">Scales & Raags</span>
+                        <div id="scale-buttons" class="button-grid"></div>
+                    </div>
+                    <div class="fb-btn-group">
+                        <span class="fb-btn-label">Bengali Patterns</span>
+                        <div id="pattern-buttons" class="button-grid"></div>
+                    </div>
+                </div>
+
+                <!-- ROW 5: Tape + History -->
+                <div class="fb-bottom-row">
+                    <div class="fb-tape-wrap">
+                        <span class="fb-btn-label">Transcript</span>
+                        <div id="sequence-tape" class="note-tape"></div>
+                    </div>
+                    <div class="fb-history-wrap">
+                        <span class="fb-btn-label">Recent</span>
+                        <div id="fretboard-history" class="fretboard-history-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- CIRCLE OF FIFTHS SCREEN -->
+        <main class="screen" id="circle-screen">
+            <div class="circle-page">
+                <div class="fb-topbar">
+                    <div class="fb-title">
+                        <h2>Circle of Fifths</h2>
+                        <div class="fb-subtitle">Interactive Key & Harmony Explorer</div>
+                    </div>
+                </div>
+                <div class="circle-container" id="circle-container">
+                    <!-- SVG built by JS will go here -->
+                </div>
+                <div class="circle-info-panel" id="circle-info-panel">
+                    <h3 id="cof-key-title">Select a Key</h3>
+                    <p id="cof-key-sig">--</p>
+                    <p id="cof-relative-minor">--</p>
+                    <div class="cof-actions">
+                        <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Major Scale</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -138,10 +229,7 @@
         <div class="blob blob-3"></div>
     </div>
 
-    <!-- Keep dropzone accessible for JS bindings -->
-    <script>
-        // Ensure styling overrides existing CSS specificity safely
-    </script>
-    <script src="/static/app.js"></script>
+    <script type="module" src="/static/js/App.js"></script>
 </body>
+
 </html>
