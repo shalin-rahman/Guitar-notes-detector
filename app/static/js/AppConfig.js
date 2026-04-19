@@ -81,4 +81,15 @@ export default class AppConfig {
         { name: "E Minor", notes: ["E", "G", "B"] },
         { name: "D Minor", notes: ["D", "F", "A"] }
     ];
+    static CHORD_VOICINGS = [
+        { name: "C", type: "maj", pos: [{ s: 4, f: 3 }, { s: 3, f: 2 }, { s: 1, f: 1 }] },
+        { name: "G", type: "maj", pos: [{ s: 5, f: 3 }, { s: 4, f: 2 }, { s: 0, f: 3 }, { s: 1, f: 0 }] },
+        { name: "D", type: "maj", pos: [{ s: 2, f: 2 }, { s: 1, f: 3 }, { s: 0, f: 2 }] },
+        { name: "A", type: "maj", pos: [{ s: 3, f: 2 }, { s: 2, f: 2 }, { s: 1, f: 2 }] },
+        { name: "E", type: "maj", pos: [{ s: 4, f: 2 }, { s: 3, f: 2 }, { s: 2, f: 1 }] },
+        { name: "Am", type: "min", pos: [{ s: 3, f: 2 }, { s: 2, f: 2 }, { s: 1, f: 1 }] },
+        { name: "Em", type: "min", pos: [{ s: 4, f: 2 }, { s: 3, f: 2 }] },
+        { name: "Dm", type: "min", pos: [{ s: 2, f: 2 }, { s: 1, f: 3 }, { s: 0, f: 1 }] },
+        { name: "F", type: "maj", pos: [{ s: 3, f: 3 }, { s: 2, f: 2 }, { s: 1, f: 1 }, { s: 0, f: 1 }] }
+    ];
 }

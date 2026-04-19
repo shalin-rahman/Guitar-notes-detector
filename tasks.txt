@@ -1,0 +1,31 @@
+Ahordian Enhancement Roadmap - Professional Phase
+==============================================
+
+[X] 1. Master Metronome Engine
+    - Precision audio tick (WebAudio)
+    - Visual pulse indicator in header
+    - Adjustable BPM and Time Signature (4/4, 3/4, 6/8)
+
+[X] 2. Smart Live Transcription
+    - Map microphone input notes directly into the "Sequence Tape"
+    - Allow users to play a riff and have the app "Save" it as a playable sequence
+    - Add "Clear Tape" and "Export to Tabs" button
+
+[X] 3. Visual Chord Shapes (Voicing Library)
+    - Add a "Voicings" toggle to the Fretboard
+    - When a chord is selected (e.g., G Major), show standard Open/Bar shapes instead of just triad dots
+    - Support for major/minor barre chord types based on root position
+
+[X] 4. Local File Analysis (DSP File Processing)
+    - Implement Drag & Drop logic for MP3/WAV
+    - Process audio chunks offline using the ACF PitchDetector
+    - Display a timeline of detected notes from the file
+
+[X] 5. Ear Training & Quiz Mode
+    - "Mystery Note" game: App plays a sound, user finds it on the neck
+    - "Diatonic Degree" Quiz: Find the "Perfect 4th of A#" within 3 seconds
+
+[X] 6. Final UI/UX Polishing
+    - Ensure 100vh full-fit across all tabs
+    - High-quality SVG animations for tab transitions
+    - Mobile-responsive adjustments for the Circle SVG

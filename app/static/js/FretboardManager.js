@@ -299,4 +299,16 @@ export default class FretboardManager {
         this.drawNoteIndicator(noteName, pos, false);
         return pos;
     }
+
+    showVoicing(positions) {
+        this.persistentNotes = [];
+        positions.forEach(p => {
+            const noteName = this.getNoteAt(p.s, p.f);
+            this.persistentNotes.push({ 
+                note: noteName, 
+                pos: { string: p.s, fret: p.f, isRoot: p.f === 0 || p.isRoot } 
+            });
+        });
+        this.render();
+    }
 }

@@ -872,3 +872,87 @@ input[type=range] { width: 100%; }
     color: #000;
     font-weight: 800;
 }
+/* Transcription Styles */
+.transcription-timeline::-webkit-scrollbar {
+    height: 6px;
+}
+.transcription-timeline::-webkit-scrollbar-thumb {
+    background: var(--glass-border);
+    border-radius: 10px;
+}
+.timeline-node {
+    animation: slideIn 0.3s ease-out;
+    cursor: default;
+}
+@keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Quiz Module Pulse */
+#quiz-module {
+    transition: all 0.5s ease;
+}
+#quiz-module.success {
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    border-color: #00ff00 !important;
+    background: rgba(0, 255, 0, 0.05) !important;
+}
+
+/* Responsive Circle SVG */
+.cof-svg {
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    user-select: none;
+    max-width: 100%;
+    height: auto;
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.5));
+}
+
+.cof-segment {
+    transition: fill 0.3s ease, filter 0.3s ease;
+    cursor: pointer;
+}
+
+.cof-segment:hover {
+    filter: brightness(1.4);
+    stroke-width: 3;
+}
+
+.cof-segment.active {
+    stroke: var(--primary);
+    stroke-width: 4;
+    filter: drop-shadow(0 0 10px var(--primary-glow)) brightness(1.2);
+}
+
+.cof-text {
+    pointer-events: none;
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Metronome UI Polish */
+.metronome-control input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
+#metronome-bpm:focus {
+    color: #fff !important;
+}
+
+/* Mobile Quick Fixes */
+@media (max-width: 768px) {
+    .main-layout {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .left-panel, .controls-panel {
+        width: 100%;
+        min-width: 0;
+    }
+    .glass-container {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: visible;
+    }
+    body {
+        overflow-y: auto;
+    }
+}

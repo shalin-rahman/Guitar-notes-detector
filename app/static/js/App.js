@@ -1,15 +1,15 @@
 import AppConfig from './AppConfig.js';
 import MusicEngine from './MusicEngine.js';
 import PitchDetector from './PitchDetector.js';
-import TrackingManager from './TrackingManager.js';
-import UIManager from './UIManager.js';
-import FileManager from './FileManager.js';
 import AudioPlayer from './AudioPlayer.js';
 import FretboardManager from './FretboardManager.js';
 import CircleManager from './CircleManager.js';
+import Metronome from './Metronome.js';
 
 class App {
     constructor() {
+        this.metronome = new Metronome();
+        
         this.isStarted = false;
         this.animationId = null;
         this.audioContext = null;
@@ -52,10 +52,23 @@ class App {
             displayIntervalsToggle: document.getElementById('display-intervals-toggle'),
             clearOverlayBtn: document.getElementById('clear-overlay-btn'),
             soundToggle: document.getElementById('sound-toggle'),
-            sequenceTape: document.getElementById('sequence-tape')
+            sequenceTape: document.getElementById('sequence-tape'),
+            
+            // Metronome
+            metroToggle: document.getElementById('metronome-toggle'),
+            metroBpm: document.getElementById('metronome-bpm'),
+            metroLight: document.getElementById('metronome-light'),
+            
+            // Transcription
+            liveCaptureBtn: document.getElementById('live-capture-btn'),
+            playTapeBtn: document.getElementById('play-tape-btn'),
+            clearTapeBtn: document.getElementById('clear-tape-btn')
         };
 
         this.tapeBuffer = [];
+        this.isCapturing = false;
+        this.captureBuffer = []; // Stability buffer for audio capture
+        this.lastCapturedNote = null;
 
         this.tracker = new TrackingManager(this.elements);
         this.ui = new UIManager(this.elements, this.tracker);
@@ -117,6 +130,61 @@ class App {
         this.elements.manualNoteInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.elements.playNoteBtn.click();
         });
+        this.initMetronome();
+    }
+
+    initMetronome() {
+        this.metronome.onTick = (isDownbeat) => {
+            const color = isDownbeat ? '#ffd700' : '#c0c0c0';
+            const shadow = isDownbeat ? '0 0 15px #ffd700' : '0 0 8px #c0c0c0';
+            this.elements.metroLight.style.background = color;
+            this.elements.metroLight.style.boxShadow = shadow;
+            setTimeout(() => {
+                this.elements.metroLight.style.background = '#333';
+                this.elements.metroLight.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)';
+            }, 100);
+        };
+
+        this.elements.metroToggle.addEventListener('click', () => {
+            if (this.metronome.isPlaying) {
+                this.metronome.stop();
+                this.elements.metroToggle.textContent = '⏵';
+            } else {
+                this.metronome.start();
+                this.elements.metroToggle.textContent = '⏸';
+            }
+        });
+
+        this.elements.metroBpm.addEventListener('change', (e) => {
+            this.metronome.setBpm(parseInt(e.target.value));
+        });
+        
+        this.elements.metroBpm.addEventListener('input', (e) => {
+            this.metronome.setBpm(parseInt(e.target.value));
+        });
+
+        // Transcription Controls
+        this.elements.liveCaptureBtn.addEventListener('click', () => {
+            this.isCapturing = !this.isCapturing;
+            this.elements.liveCaptureBtn.textContent = this.isCapturing ? '🟢 Record to Tape: ON' : '🔴 Record to Tape: OFF';
+            this.elements.liveCaptureBtn.classList.toggle('active', this.isCapturing);
+        });
+
+        this.elements.playTapeBtn.addEventListener('click', () => {
+            if (this.tapeBuffer.length > 0) {
+                this.playSequence([...this.tapeBuffer]);
+            }
+        });
+
+        this.elements.clearTapeBtn.addEventListener('click', () => {
+            this.tapeBuffer = [];
+            this.updateTape(-1);
+        });
+    }
+
+    loadTranscriptionToTape(notes) {
+        this.tapeBuffer = notes.slice(0, 24); // Limit to visible tape size
+        this.updateTape(-1);
     }
 
     initAudioContext() {
@@ -331,10 +399,38 @@ class App {
                 this.ui.render(freq);
 
                 const noteData = MusicEngine.freqToNote(freq);
-                if (noteData && Math.abs(noteData.cents) < 10) {
+                if (noteData && Math.abs(noteData.cents) < 15) {
                     if (this.lastDetectedNote !== noteData.name) {
                         this.lastDetectedNote = noteData.name;
                         this.fretboard.showNote(noteData.name);
+                        
+                        // Notify CircleManager for possible Quiz validation
+                        if (this.circleManager) {
+                            this.circleManager.handleDetectedNote(noteData.name);
+                        }
+                    }
+
+                    // Live Transcription Logic
+                    if (this.isCapturing) {
+                        this.captureBuffer.push(noteData.name);
+                        if (this.captureBuffer.length > 8) { // Buffer for 8 frames (~130ms) to ensure stability
+                            const mostFrequent = this.getMostFrequent(this.captureBuffer);
+                            if (mostFrequent && mostFrequent !== this.lastCapturedNote) {
+                                this.lastCapturedNote = mostFrequent;
+                                // Add ONLY the note name (without octave) to the tape for cleaner look
+                                const noteOnly = mostFrequent.replace(/[0-9]/g, '');
+                                this.tapeBuffer.push(noteOnly);
+                                if (this.tapeBuffer.length > 24) this.tapeBuffer.shift();
+                                this.updateTape(-1);
+                            }
+                            this.captureBuffer = [];
+                        }
+                    }
+                } else {
+                    // Reset capture state on silence/noise
+                    if (this.isCapturing) {
+                        this.captureBuffer = [];
+                        this.lastCapturedNote = null;
                     }
                 }
 
@@ -346,6 +442,20 @@ class App {
             console.error("Microphone access denied:", err);
             alert("Please allow microphone access to use the tuner.");
         }
+    }
+
+    getMostFrequent(arr) {
+        const counts = {};
+        let max = 0;
+        let mostFreq = null;
+        for (const val of arr) {
+            counts[val] = (counts[val] || 0) + 1;
+            if (counts[val] > max) {
+                max = counts[val];
+                mostFreq = val;
+            }
+        }
+        return max >= 5 ? mostFreq : null; // Require at least 5 matches in the buffer
     }
 
     stop() {
@@ -365,6 +475,7 @@ class App {
 window.triggerFretboardNote = (note) => window.AhordianApp.triggerFretboardNote(note);
 window.triggerScale = (scale) => window.AhordianApp.triggerScale(scale);
 window.playSequence = (notes) => window.AhordianApp.playSequence(notes);
+window.loadTranscriptionToTape = (notes) => window.AhordianApp.loadTranscriptionToTape(notes);
 
 // Bootstrap
 document.addEventListener("DOMContentLoaded", () => {

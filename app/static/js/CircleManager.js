@@ -32,8 +32,21 @@ export default class CircleManager {
             diatonic: document.getElementById('cof-diatonic-chords'),
             playBtn: document.getElementById('cof-play-scale'),
             intervalsToggle: document.getElementById('cof-intervals-toggle'),
-            scaleSelect: document.getElementById('cof-scale-select')
+            voicingsToggle: document.getElementById('cof-show-voicings'),
+            quizToggle: document.getElementById('cof-quiz-mode'),
+            scaleSelect: document.getElementById('cof-scale-select'),
+            
+            // Quiz UI
+            quizModule: document.getElementById('quiz-module'),
+            quizPrompt: document.getElementById('quiz-prompt'),
+            quizStatus: document.getElementById('quiz-status'),
+            quizStartBtn: document.getElementById('quiz-start-btn')
         };
+
+        this.quizActive = false;
+        this.targetNote = null;
+        this.targetChord = null; // Triad array
+        this.quizType = 'note'; // 'note' or 'chord'
 
         this.initScaleSelector();
         this.render();
@@ -143,6 +156,72 @@ export default class CircleManager {
             this.elements.intervalsToggle.addEventListener('change', (e) => {
                 this.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
             });
+        }
+
+        // Quiz Mode
+        if (this.elements.quizToggle) {
+            this.elements.quizToggle.addEventListener('change', (e) => {
+                this.elements.quizModule.style.display = e.target.checked ? 'block' : 'none';
+                if (!e.target.checked) this.stopQuiz();
+            });
+        }
+
+        if (this.elements.quizStartBtn) {
+            this.elements.quizStartBtn.addEventListener('click', () => {
+                if (this.quizActive) this.stopQuiz();
+                else this.startQuiz();
+            });
+        }
+    }
+
+    startQuiz() {
+        if (this.currentKeyIndex === null) {
+            this.elements.quizStatus.textContent = "Please select a key on the circle first!";
+            return;
+        }
+        this.quizActive = true;
+        this.elements.quizStartBtn.textContent = "Stop Quiz";
+        this.nextQuizRound();
+    }
+
+    stopQuiz() {
+        this.quizActive = false;
+        this.targetNote = null;
+        this.elements.quizStartBtn.textContent = "Start Quiz";
+        this.elements.quizPrompt.textContent = "Ready?";
+        this.elements.quizStatus.textContent = "Select a key, then press start.";
+    }
+
+    nextQuizRound() {
+        if (!this.quizActive) return;
+        
+        // Pick a random note from the current scale
+        const randIdx = Math.floor(Math.random() * this.currentScaleNotes.length);
+        this.targetNote = this.currentScaleNotes[randIdx];
+        
+        this.elements.quizPrompt.textContent = `Find: ${this.targetNote}`;
+        this.elements.quizStatus.textContent = "Listen and play on your guitar...";
+        
+        // Play the target note so user hears it (Ear Training!)
+        if (this.appRef && this.appRef.player) {
+            this.appRef.player.playNote(this.targetNote + "4");
+        }
+    }
+
+    handleDetectedNote(noteName) {
+        if (!this.quizActive || !this.targetNote) return;
+        
+        const detectedBase = noteName.replace(/[0-9]/g, '');
+        if (detectedBase === this.targetNote) {
+            // Success!
+            this.elements.quizPrompt.textContent = "CORRECT! ✨";
+            this.elements.quizStatus.textContent = `Great! That was indeed ${this.targetNote}`;
+            
+            // Visual celebration on fretboard
+            this.fretboard.showNote(noteName);
+            
+            this.targetNote = null;
+            setTimeout(() => this.nextQuizRound(), 1500);
         }
     }
 
@@ -302,7 +381,18 @@ export default class CircleManager {
         if (this.appRef) {
             this.appRef.playSequence([triadNotesArray.join('-')], 100);
         }
-        // Visually map ONLY the triad to the miniature fretboard
+
+        // Check if we should show a specific guitar voicing
+        if (this.elements.voicingsToggle && this.elements.voicingsToggle.checked) {
+            const isMinor = triadNotesArray.length >= 2 && AppConfig.NOTE_NAMES.indexOf(triadNotesArray[1]) === (AppConfig.NOTE_NAMES.indexOf(triadNotesArray[0]) + 3) % 12;
+            const voicing = AppConfig.CHORD_VOICINGS.find(v => v.name === rootName && v.type === (isMinor ? 'min' : 'maj'));
+            if (voicing) {
+                this.fretboard.showVoicing(voicing.pos);
+                return;
+            }
+        }
+
+        // Visually map ONLY the triad to the miniature fretboard (abstract circles)
         this.fretboard.showScale(triadNotesArray);
         
         // Remove active state from caged buttons

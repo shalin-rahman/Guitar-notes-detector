@@ -24,6 +24,14 @@
                 <button class="nav-btn" data-target="fretboard-screen">Fretboard</button>
                 <button class="nav-btn" data-target="circle-screen">Circle of 5ths</button>
             </nav>
+
+            <div class="metronome-control" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                <div id="metronome-light" style="width: 12px; height: 12px; border-radius: 50%; background: #333; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: all 0.1s ease;"></div>
+                <input type="number" id="metronome-bpm" value="120" min="40" max="250" style="width: 50px; background: transparent; border: none; color: var(--primary); font-weight: 800; font-family: 'Outfit'; font-size: 1rem; text-align: center; outline: none;">
+                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">BPM</span>
+                <button id="metronome-toggle" style="background: transparent; border: none; color: var(--text-main); cursor: pointer; font-size: 1.1rem; transition: 0.2s;">⏵</button>
+            </div>
+
             <div class="status-badge" id="mic-status">Microphone Off</div>
         </header>
 
@@ -64,6 +72,7 @@
                     <div class="history-header">
                         <h3>Live Stream & History</h3>
                         <div class="history-actions">
+                            <button id="live-capture-btn" class="secondary-btn small-btn">🔴 Record to Tape: OFF</button>
                             <button id="save-btn" class="secondary-btn small-btn">Save Log</button>
                             <label for="file-input" class="secondary-btn small-btn file-label">Upload File</label>
                             <input type="file" id="file-input" hidden accept="audio/*">
@@ -190,8 +199,14 @@
 
                 <!-- ROW 5: Tape + History -->
                 <div class="fb-bottom-row">
-                    <div class="fb-tape-wrap">
-                        <span class="fb-btn-label">Transcript</span>
+                    <div class="fb-tape-wrap" style="display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="fb-btn-label" style="margin:0;">Transcript</span>
+                            <div style="display: flex; gap: 4px;">
+                                <button id="play-tape-btn" class="primary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">▶ Play</button>
+                                <button id="clear-tape-btn" class="secondary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">🗑 Clear</button>
+                            </div>
+                        </div>
                         <div id="sequence-tape" class="note-tape"></div>
                     </div>
                     <div class="fb-history-wrap">
@@ -225,10 +240,23 @@
                         <p id="cof-relative-minor">--</p>
                         <p id="cof-diatonic-chords">--</p>
                         <div class="cof-actions">
-                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 12px;">
+                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;">
                                 <input type="checkbox" id="cof-intervals-toggle"> Show functional intervals instead of note names
                             </label>
+                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;">
+                                <input type="checkbox" id="cof-show-voicings"> Show Open Chord Voicings
+                            </label>
+                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 12px;">
+                                <input type="checkbox" id="cof-quiz-mode"> Enable Ear Training Mode
+                            </label>
                             <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence Here</button>
+                        </div>
+                        
+                        <div id="quiz-module" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; text-align: center; backdrop-filter: blur(10px);">
+                            <h4 style="color: var(--primary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Ear Training Quiz</h4>
+                            <div id="quiz-prompt" style="font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; color: #fff;">Ready?</div>
+                            <div id="quiz-status" style="font-size: 0.85rem; color: var(--text-muted); min-height: 20px;">Select a key, then press start.</div>
+                            <button id="quiz-start-btn" class="primary-btn small-btn" style="margin-top: 10px; width: 120px;">Start Quiz</button>
                         </div>
                     </div>
                 </div>
