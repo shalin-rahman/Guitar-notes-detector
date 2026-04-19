@@ -112,10 +112,7 @@ export default class CircleManager {
                 const rootName = this.activeMode === 'major' ? k.maj : k.min.replace('m', '');
                 this.appRef.elements.manualNoteInput.value = rootName; // sets the exact parsed root note
                 
-                // Switch to Fretboard screen seamlessly
-                const fbBtn = document.querySelector('.nav-btn[data-target="fretboard-screen"]');
-                if (fbBtn) fbBtn.click();
-
+                // Trigger the audio sequence locally without jumping tabs
                 this.appRef.triggerScale(this.activeMode === 'major' ? 'Major (Ionian)' : 'Aeolian (Minor)');
             }
         });
@@ -162,12 +159,43 @@ export default class CircleManager {
         this.elements.playBtn.disabled = false;
         
         // CSS Animation & Active State Reset
-        this.container.querySelectorAll('.cof-segment').forEach(el => el.classList.remove('active'));
-        this.container.querySelectorAll('.cof-text').forEach(el => el.classList.remove('active'));
+        this.container.querySelectorAll('.cof-segment').forEach(el => {
+            el.classList.remove('active');
+            el.style.fill = ''; // reset inline styles
+        });
+        this.container.querySelectorAll('.cof-text').forEach(el => {
+            el.classList.remove('active');
+            el.style.fill = '';
+        });
 
-        // Apply active state
+        // Apply active state to the specific selected key
         this.container.querySelectorAll(`.cof-segment[data-idx="${idx}"]`).forEach(el => el.classList.add('active'));
         this.container.querySelectorAll(`.cof-text[data-idx="${idx}"]`).forEach(el => el.classList.add('active'));
+        
+        // Highlight Diatonic Neighbors (IV and V slice)
+        const leftIdx = (idx - 1 + 12) % 12;
+        const rightIdx = (idx + 1) % 12;
+        [leftIdx, rightIdx].forEach(neighborIdx => {
+            this.container.querySelectorAll(`.cof-segment[data-idx="${neighborIdx}"]`).forEach(el => {
+                el.style.fill = 'rgba(255, 215, 0, 0.15)'; // Golden neighbor highlight
+            });
+            this.container.querySelectorAll(`.cof-text[data-idx="${neighborIdx}"]`).forEach(el => {
+                el.style.fill = 'rgba(255, 215, 0, 0.7)';
+            });
+        });
+
+        // Optional spin alignment animation (rotates the SVG to put selected key at top)
+        const rotateAngle = -idx * 30;
+        const svgEl = this.container.querySelector('svg');
+        if (svgEl) {
+            svgEl.style.transform = `rotate(${rotateAngle}deg)`;
+        }
+        
+        // Keep the text upright despite SVG rotation!
+        this.container.querySelectorAll('.cof-text').forEach(t => {
+            t.style.transform = `rotate(${-rotateAngle}deg)`;
+            t.style.transformOrigin = `${t.getAttribute('x')}px ${t.getAttribute('y')}px`;
+        });
         
         // Render scale overlay on the Circle's localized fretboard instance
         const ascending = intervals.map(inter => AppConfig.NOTE_NAMES[(rootIdx + inter) % 12]);
