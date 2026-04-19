@@ -25,6 +25,20 @@ export default class AppConfig {
         { name: "Popular: Purano Sei", notes: ["সা", "সা", "সা", "রে", "গা", "রে", "সা", "ধা", "সা", "রে"] },
         { name: "Popular: Ekla Chalo", notes: ["সা", "রে", "গা", "পা", "পা", "ধা", "পা", "মা", "গা"] }
     ];
+    static CHROMATIC_COLORS = {
+        'C':  '#EF4444', // Red
+        'C#': '#F97316', // Orange-Red
+        'D':  '#F59E0B', // Orange
+        'D#': '#EAB308', // Yellow
+        'E':  '#84CC16', // Yellow-Green
+        'F':  '#22C55E', // Green
+        'F#': '#06B6D4', // Cyan
+        'G':  '#3B82F6', // Light Blue
+        'G#': '#6366F1', // Blue-Indigo
+        'A':  '#8B5CF6', // Purple
+        'A#': '#D946EF', // Magenta
+        'B':  '#F43F5E'  // Pink-Red
+    };
     static SCALE_DEFINITIONS = [
         // 10 Basic Thaats (Indian Classical)
         { name: "Thaat Bilaval", intervals: [0, 2, 4, 5, 7, 9, 11] },

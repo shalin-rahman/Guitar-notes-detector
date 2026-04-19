@@ -30,9 +30,12 @@ export default class CircleManager {
             sig: document.getElementById('cof-key-sig'),
             relMin: document.getElementById('cof-relative-minor'),
             diatonic: document.getElementById('cof-diatonic-chords'),
-            playBtn: document.getElementById('cof-play-scale')
+            playBtn: document.getElementById('cof-play-scale'),
+            intervalsToggle: document.getElementById('cof-intervals-toggle'),
+            scaleSelect: document.getElementById('cof-scale-select')
         };
 
+        this.initScaleSelector();
         this.render();
         this.bindEvents();
         
@@ -74,8 +77,11 @@ export default class CircleManager {
             const minX = center + Math.cos(textAngle) * (innerRadius + (midRadius - innerRadius) / 2);
             const minY = center + Math.sin(textAngle) * (innerRadius + (midRadius - innerRadius) / 2) + 5;
 
-            svg += `<text x="${majX}" y="${majY}" class="cof-text cof-maj-text" data-idx="${i}" data-mode="major">${this.keys[i].maj}</text>`;
-            svg += `<text x="${minX}" y="${minY}" class="cof-text cof-min-text" data-idx="${i}" data-mode="minor">${this.keys[i].min}</text>`;
+            svg += `<text x="${majX}" y="${majY - 6}" class="cof-text cof-maj-text" data-idx="${i}" data-mode="major">${this.keys[i].maj}</text>`;
+            svg += `<text x="${majX}" y="${majY + 12}" class="cof-text cof-roman cof-maj-roman" data-idx="${i}" data-mode="major" fill="rgba(255,215,0,0.8)" font-size="12" font-weight="700"></text>`;
+
+            svg += `<text x="${minX}" y="${minY - 4}" class="cof-text cof-min-text" data-idx="${i}" data-mode="minor">${this.keys[i].min}</text>`;
+            svg += `<text x="${minX}" y="${minY + 10}" class="cof-text cof-roman cof-min-roman" data-idx="${i}" data-mode="minor" fill="rgba(200,200,200,0.8)" font-size="10" font-weight="700"></text>`;
         }
 
         // Center hub
@@ -96,6 +102,14 @@ export default class CircleManager {
         return `M ${x1In} ${y1In} L ${x1Out} ${y1Out} A ${rOut} ${rOut} 0 ${largeArc} 1 ${x2Out} ${y2Out} L ${x2In} ${y2In} A ${rIn} ${rIn} 0 ${largeArc} 0 ${x1In} ${y1In} Z`;
     }
 
+    initScaleSelector() {
+        if (!this.elements.scaleSelect) return;
+        const options = AppConfig.SCALE_DEFINITIONS.map(s => `<option value="${s.name}">${s.name}</option>`);
+        this.elements.scaleSelect.innerHTML = options.join('');
+        // Default to Major
+        this.elements.scaleSelect.value = "Major (Ionian)";
+    }
+
     bindEvents() {
         const segments = this.container.querySelectorAll('.cof-segment');
         segments.forEach(seg => {
@@ -109,54 +123,112 @@ export default class CircleManager {
         this.elements.playBtn.addEventListener('click', () => {
             if (this.activeKeyIndex !== -1 && this.appRef) {
                 const k = this.keys[this.activeKeyIndex];
-                const rootName = this.activeMode === 'major' ? k.maj : k.min.replace('m', '');
-                this.appRef.elements.manualNoteInput.value = rootName; // sets the exact parsed root note
-                
-                // Trigger the audio sequence locally without jumping tabs
-                this.appRef.triggerScale(this.activeMode === 'major' ? 'Major (Ionian)' : 'Aeolian (Minor)');
+                const rootName = this.activeMode === 'major' ? k.maj : k.min;
+                const scaleName = this.elements.scaleSelect.value;
+                this.appRef.triggerScale(scaleName, rootName.replace('m', ''));
             }
         });
+
+        // Scale Select Change
+        if (this.elements.scaleSelect) {
+            this.elements.scaleSelect.addEventListener('change', () => {
+                if (this.activeKeyIndex !== -1) {
+                    this.selectKey(this.activeKeyIndex);
+                }
+            });
+        }
+
+        // Interval Toggle Logic
+        if (this.elements.intervalsToggle) {
+            this.elements.intervalsToggle.addEventListener('change', (e) => {
+                this.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
+            });
+        }
     }
 
-    selectKey(idx) {
+    selectKey(idx, mode = null) {
+        if (mode) this.activeMode = mode;
         this.activeKeyIndex = idx;
         const k = this.keys[idx];
+        const rootNote = this.activeMode === 'major' ? k.maj : k.min;
+        
+        // Find selected scale definition
+        const scaleDef = AppConfig.SCALE_DEFINITIONS.find(s => s.name === this.elements.scaleSelect.value) || AppConfig.SCALE_DEFINITIONS[0];
+        const intervals = scaleDef.intervals || scaleDef.arohan || [0];
 
-        // Format Diatonic Chords string logic
-        const rootNote = k.maj;
-        const rootIdx = AppConfig.NOTE_NAMES.indexOf(rootNote);
-        const intervals = [0, 2, 4, 5, 7, 9, 11]; // Major Ionian scale
+        // Convert flat to sharp for exact array mapping
+        const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+        let searchNote = flatMap[rootNote] || rootNote;
+        
+        const rootIdx = AppConfig.NOTE_NAMES.indexOf(searchNote);
         const roman = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+        
+        // Interactive Diatonic Chord Buttons
         const diatonicArray = intervals.map((interval, index) => {
-            const noteName = AppConfig.NOTE_NAMES[(rootIdx + interval) % 12];
-            return `<strong>${roman[index]}</strong>: ${noteName}`;
+            const chordRootName = AppConfig.NOTE_NAMES[(rootIdx + interval) % 12];
+            const isMinor = roman[index].toLowerCase() === roman[index]; // simple check
+            const isDim = roman[index].includes('°');
+            
+            // Build the triad for visual highlight
+            const triadIntervals = isDim ? [0, 3, 6] : (isMinor ? [0, 3, 7] : [0, 4, 7]);
+            const chordIdx = AppConfig.NOTE_NAMES.indexOf(chordRootName);
+            const triadNotes = triadIntervals.map(i => AppConfig.NOTE_NAMES[(chordIdx + i) % 12]);
+            const btnData = JSON.stringify(triadNotes).replace(/"/g, '&quot;');
+            
+            return `<button class="cof-chord-btn" onclick="window.AhordianApp.circleManager.playDiatonicChord('${chordRootName}', ${btnData})"><strong>${roman[index]}</strong><br>${chordRootName}${isMinor && !isDim ? 'm' : ''}${isDim ? 'dim' : ''}</button>`;
         });
 
         // Calculate CAGED anchor frets (Standard Tuning assumption)
-        // E-string root (Standard: E2 is offset 4) - fret = (rootIdx - 4 + 12) % 12
         const eFret = (rootIdx - AppConfig.NOTE_NAMES.indexOf('E') + 12) % 12;
         const aFret = (rootIdx - AppConfig.NOTE_NAMES.indexOf('A') + 12) % 12;
         const dFret = (rootIdx - AppConfig.NOTE_NAMES.indexOf('D') + 12) % 12;
         
-        // C-shape (Root on A string, pinky) -> Index is aFret - 3
-        // A-shape (Root on A string, index) -> Index is aFret
-        // G-shape (Root on E string, pinky) -> Index is eFret - 3
-        // E-shape (Root on E string, index) -> Index is eFret
-        // D-shape (Root on D string, index) -> Index is dFret
-        const cagedText = `
-            <span class="caged-tag"><strong>C</strong>-Shape: Fr ${((aFret - 3 + 12) % 12) || 12}</span> | 
-            <span class="caged-tag"><strong>A</strong>-Shape: Fr ${aFret || 12}</span> | 
-            <span class="caged-tag"><strong>G</strong>-Shape: Fr ${((eFret - 3 + 12) % 12) || 12}</span> | 
-            <span class="caged-tag"><strong>E</strong>-Shape: Fr ${eFret || 12}</span> | 
-            <span class="caged-tag"><strong>D</strong>-Shape: Fr ${dFret || 12}</span>
+        const cFret = (aFret - 3 + 12) % 12 || 12;
+        const aFrame = aFret || 12;
+        const gFret = (eFret - 3 + 12) % 12 || 12;
+        const eFrame = eFret || 12;
+        const dFrame = dFret || 12;
+
+        // Create interactive CAGED filter buttons
+        const createCagedBtn = (shape, fretPos) => {
+            const minFreq = Math.max(0, fretPos - 1);
+            const maxFreq = minFreq + 4; // 4-fret span
+            return `<button class="caged-btn" onclick="window.AhordianApp.circleManager.filterCAGED(${minFreq}, ${maxFreq}, this)"><strong>${shape}</strong>-Shape (Fr ${fretPos})</button>`;
+        };
+
+        const cagedHtml = `
+            ${createCagedBtn('C', cFret)}
+            ${createCagedBtn('A', aFrame)}
+            ${createCagedBtn('G', gFret)}
+            ${createCagedBtn('E', eFrame)}
+            ${createCagedBtn('D', dFrame)}
         `;
 
         // Update UI info panel
-        this.elements.title.textContent = `Key of ${k.maj} Major`;
+        this.elements.title.textContent = `${rootNote} ${scaleDef.name}`;
         this.elements.sig.innerHTML = `<strong>Signature:</strong> ${k.sig}`;
         this.elements.relMin.innerHTML = `<strong>Relative Minor:</strong> ${k.min}`;
-        this.elements.diatonic.innerHTML = `<strong>Diatonic Chords:</strong> <br> <span style="font-size: 0.9em;">${diatonicArray.join(' | ')}</span><br><br><strong>CAGED Roots:</strong> <br> <span style="font-size: 0.9em; color: var(--primary);">${cagedText}</span>`;
+        
+        // Inject grid HTML
+        if (scaleDef.name.includes("Major") || scaleDef.name.includes("Minor") || scaleDef.name.includes("Lydian") || scaleDef.name.includes("Dorian")) {
+             this.elements.diatonic.innerHTML = `
+                <strong>Diatonic Triads:</strong>
+                <div class="cof-chord-grid">${diatonicArray.join('')}</div>
+                <strong>Visual CAGED Filters:</strong>
+                <div class="caged-grid">${cagedHtml}</div>
+            `;
+        } else {
+            // Highlighting non-diatonic scales (Raags/Pentatonics)
+            this.elements.diatonic.innerHTML = `
+                <strong>Visual CAGED Filters:</strong>
+                <div class="caged-grid">${cagedHtml}</div>
+            `;
+        }
+        
         this.elements.playBtn.disabled = false;
+        
+        // Save current scale for later filtering
+        this.currentScaleNotes = intervals.map(inter => AppConfig.NOTE_NAMES[(rootIdx + inter) % 12]);
         
         // CSS Animation & Active State Reset
         this.container.querySelectorAll('.cof-segment').forEach(el => {
@@ -179,10 +251,34 @@ export default class CircleManager {
             this.container.querySelectorAll(`.cof-segment[data-idx="${neighborIdx}"]`).forEach(el => {
                 el.style.fill = 'rgba(255, 215, 0, 0.15)'; // Golden neighbor highlight
             });
-            this.container.querySelectorAll(`.cof-text[data-idx="${neighborIdx}"]`).forEach(el => {
+            this.container.querySelectorAll(`.cof-maj-text[data-idx="${neighborIdx}"], .cof-min-text[data-idx="${neighborIdx}"]`).forEach(el => {
                 el.style.fill = 'rgba(255, 215, 0, 0.7)';
             });
         });
+
+        // ----------------------------------------
+        // Dynamically Inject Roman Numerals into SVG
+        // ----------------------------------------
+        this.container.querySelectorAll('.cof-roman').forEach(el => el.textContent = '');
+        
+        const setRoman = (i, mode, text) => {
+            const el = this.container.querySelector(`.cof-${mode}-roman[data-idx="${i}"]`);
+            if (el) el.textContent = text;
+        };
+
+        // Major Mode Chords
+        setRoman(idx, 'maj', 'I');
+        setRoman(leftIdx, 'maj', 'IV');
+        setRoman(rightIdx, 'maj', 'V');
+        
+        // Minor Mode Chords
+        setRoman(idx, 'min', 'vi');
+        setRoman(leftIdx, 'min', 'ii');
+        setRoman(rightIdx, 'min', 'iii');
+        
+        // Diminished Chord (Right + 1 on Inner Ring)
+        const dimIdx = (idx + 2) % 12;
+        setRoman(dimIdx, 'min', 'vii°');
 
         // Optional spin alignment animation (rotates the SVG to put selected key at top)
         const rotateAngle = -idx * 30;
@@ -198,7 +294,27 @@ export default class CircleManager {
         });
         
         // Render scale overlay on the Circle's localized fretboard instance
-        const ascending = intervals.map(inter => AppConfig.NOTE_NAMES[(rootIdx + inter) % 12]);
-        this.fretboard.showScale(ascending);
+        this.fretboard.showScale(this.currentScaleNotes);
+    }
+
+    playDiatonicChord(rootName, triadNotesArray) {
+        // Trigger audio strum globally
+        if (this.appRef) {
+            this.appRef.playSequence([triadNotesArray.join('-')], 100);
+        }
+        // Visually map ONLY the triad to the miniature fretboard
+        this.fretboard.showScale(triadNotesArray);
+        
+        // Remove active state from caged buttons
+        this.elements.diatonic.querySelectorAll('.caged-btn').forEach(b => b.classList.remove('active'));
+    }
+
+    filterCAGED(minFret, maxFret, btnEl) {
+        // Toggle button UI
+        this.elements.diatonic.querySelectorAll('.caged-btn').forEach(b => b.classList.remove('active'));
+        if (btnEl) btnEl.classList.add('active');
+
+        // Render the full scale but bounded by CAGED mechanics
+        this.fretboard.showScale(this.currentScaleNotes, { min: minFret, max: maxFret });
     }
 }

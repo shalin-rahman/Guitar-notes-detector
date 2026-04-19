@@ -151,6 +151,9 @@
                     <div class="fb-topbar-controls" style="width: 100%; display: flex; justify-content: flex-end;">
                         <select id="tuning-select" class="styled-input pointer fb-select"></select>
                         <label class="checkbox-label compact">
+                            <input type="checkbox" id="display-intervals-toggle"> Intervals
+                        </label>
+                        <label class="checkbox-label compact">
                             <input type="checkbox" id="toggle-overlay"> Overlay
                         </label>
                         <button id="clear-overlay-btn" class="secondary-btn small-btn">Clear</button>
@@ -213,11 +216,18 @@
                         <!-- SVG built by JS will go here -->
                     </div>
                     <div class="circle-info-panel" id="circle-info-panel" style="flex: 1; min-width: 300px; max-width: 600px; background: var(--glass-bg); padding: 20px; border-radius: 12px;">
-                        <h3 id="cof-key-title" style="margin-top: 0;">Select a Key</h3>
+                        <h3 id="cof-key-title">Select a Key</h3>
+                        <div class="settings-mini" style="margin-bottom: 20px;">
+                            <label for="cof-scale-select">Practice Scale:</label>
+                            <select id="cof-scale-select" class="styled-input pointer"></select>
+                        </div>
                         <p id="cof-key-sig">--</p>
                         <p id="cof-relative-minor">--</p>
                         <p id="cof-diatonic-chords">--</p>
                         <div class="cof-actions">
+                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 12px;">
+                                <input type="checkbox" id="cof-intervals-toggle"> Show functional intervals instead of note names
+                            </label>
                             <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence Here</button>
                         </div>
                     </div>

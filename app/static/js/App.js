@@ -49,6 +49,7 @@ class App {
             patternButtons: document.getElementById('pattern-buttons'),
             tuningSelect: document.getElementById('tuning-select'),
             toggleOverlay: document.getElementById('toggle-overlay'),
+            displayIntervalsToggle: document.getElementById('display-intervals-toggle'),
             clearOverlayBtn: document.getElementById('clear-overlay-btn'),
             soundToggle: document.getElementById('sound-toggle'),
             sequenceTape: document.getElementById('sequence-tape')
@@ -91,6 +92,12 @@ class App {
             this.fretboard.clearOverlay();
             this.elements.toggleOverlay.checked = false;
         });
+
+        if (this.elements.displayIntervalsToggle) {
+            this.elements.displayIntervalsToggle.addEventListener('change', (e) => {
+                this.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
+            });
+        }
 
         this.elements.navBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -185,14 +192,14 @@ class App {
         `).join('');
     }
 
-    triggerScale(scaleName) {
+    triggerScale(scaleName, customRoot = null) {
         const scale = AppConfig.SCALE_DEFINITIONS.find(s => s.name === scaleName);
         if (!scale) return;
 
-        let rootName = this.elements.saRoot.value;
+        let rootName = customRoot || this.elements.saRoot.value;
         const manualNote = this.elements.manualNoteInput.value.trim().toUpperCase();
         
-        if (manualNote) {
+        if (!customRoot && manualNote) {
             let letter = manualNote.replace(/[0-9]/g, '');
             const flatMap = { 'DB': 'C#', 'EB': 'D#', 'FB': 'E', 'GB': 'F#', 'AB': 'G#', 'BB': 'A#', 'CB': 'B' };
             if (flatMap[letter]) letter = flatMap[letter];

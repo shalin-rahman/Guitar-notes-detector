@@ -6,7 +6,13 @@ export default class FretboardManager {
         this.numFrets = 16;
         this.strings = initialTuning || ['E4', 'B3', 'G3', 'D3', 'A2', 'E2'];
         this.persistentNotes = [];
+        this.displayMode = 'notes'; // 'notes' or 'intervals'
         this.showNoteNames = true;
+        this.render();
+    }
+
+    setDisplayMode(mode) {
+        this.displayMode = mode;
         this.render();
     }
 
@@ -141,6 +147,10 @@ export default class FretboardManager {
 
     showScale(noteNames, bounds = null) {
         this.persistentNotes = [];
+        if (!noteNames || noteNames.length === 0) return;
+        
+        const rootNoteLabel = noteNames[0]; // Assume first note in array is the Root
+
         for (let s = 0; s < this.strings.length; s++) {
             for (let f = 0; f <= this.numFrets; f++) {
                 if (bounds && (f < bounds.min || f > bounds.max)) {
@@ -150,8 +160,18 @@ export default class FretboardManager {
                 }
                 const currentNote = this.getNoteAt(s, f);
                 if (!currentNote) continue;
-                if (noteNames.includes(currentNote.replace(/[0-9]/g, ''))) {
-                    this.persistentNotes.push({ note: currentNote, pos: { string: s, fret: f } });
+                
+                const label = currentNote.replace(/[0-9]/g, '');
+                const noteIndex = noteNames.indexOf(label);
+                if (noteIndex !== -1) {
+                    // For triad mappings, the first note in array is interval 1.
+                    // But wait, if playing a subset, noteNames might just be the triad.
+                    // We'll map to array index+1 blindly for simple relative scale degrees, 
+                    // or explicitly rely on the root note.
+                    this.persistentNotes.push({ 
+                        note: currentNote, 
+                        pos: { string: s, fret: f, isRoot: noteIndex === 0, interval: noteIndex + 1 } 
+                    });
                 }
             }
         }
@@ -195,30 +215,73 @@ export default class FretboardManager {
 
         if (!isPersistent) this.pluckString(pos.string);
 
+        const isKeyRoot = pos.isRoot || false;
+        const noteColor = AppConfig.CHROMATIC_COLORS[label] || '#ffd700';
+
         const indicator = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        indicator.setAttribute("filter", isPersistent ? "url(#glow-persist)" : "url(#glow-active)");
+        // Root notes get a specialized heavy vibrant glow
+        indicator.setAttribute("filter", isPersistent ? (isKeyRoot ? "url(#glow-active)" : "url(#glow-persist)") : "url(#glow-active)");
 
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         circle.setAttribute("cx", x);
         circle.setAttribute("cy", y);
-        circle.setAttribute("r", isPersistent ? 7 : 10);
-        circle.setAttribute("fill", isPersistent ? "rgba(255,215,0,0.45)" : "#ffd700");
-        circle.setAttribute("stroke", isPersistent ? "rgba(255,255,255,0.3)" : "#fff");
-        circle.setAttribute("stroke-width", "1");
+        
+        // Sizing logic: Make all markers completely visible and readable
+        const radius = isPersistent ? (isKeyRoot ? 12 : 11) : 12.5;
+        circle.setAttribute("r", radius);
+        
+        // Premium aesthetic shading: Full maximum opacity for everything, no more ghosting! 
+        circle.setAttribute("fill", noteColor);
+        circle.setAttribute("fill-opacity", "1");
+        
+        // Sleek contrast borders: Root gets heavy bright rim, others get a clean thin dark rim
+        circle.setAttribute("stroke", isKeyRoot ? "#ffffff" : "rgba(0,0,0,0.4)");
+        circle.setAttribute("stroke-width", isKeyRoot ? "2.5" : "1");
+        
+        // Drop shadow for everything to pop off the wood
+        circle.style.filter = `drop-shadow(0px 3px 5px rgba(0,0,0,0.6))`;
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", x);
         text.setAttribute("y", y);
-        text.setAttribute("fill", isPersistent ? "#fff" : "#000");
-        text.setAttribute("font-size", isPersistent ? "8" : "10");
-        text.setAttribute("font-weight", "bold");
+        
+        // Text contrasting logic: All text large and bold
+        text.setAttribute("fill", "#ffffff");
+        text.style.textShadow = "0px 1px 2px rgba(0,0,0,0.8)"; // Text shadow for guaranteed legibility!
+        text.setAttribute("font-size", "11");
+        text.setAttribute("font-weight", "800");
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "central");
         text.setAttribute("font-family", "Outfit, sans-serif");
-        text.textContent = label;
+        
+        // Display functional intervals instead of note text if toggled AND this is a persistently calculated scale degree
+        let displayValue = label;
+        if (this.displayMode === 'intervals' && isPersistent && pos.interval !== undefined) {
+            displayValue = pos.interval.toString();
+        }
+        text.textContent = displayValue;
 
         indicator.appendChild(circle);
         indicator.appendChild(text);
+        
+        // Add interactive plucking functionality!
+        indicator.style.cursor = 'pointer';
+        indicator.addEventListener('click', () => {
+            // Check if global app instance exists to trigger synthesizer
+            if (window.AhordianApp && window.AhordianApp.player) {
+                window.AhordianApp.player.playNote(noteName);
+                
+                // Visual feedback ping on the local fretboard
+                this.pluckString(pos.string);
+                circle.setAttribute("stroke", "#ffffff");
+                circle.setAttribute("stroke-width", "3");
+                setTimeout(() => {
+                    circle.setAttribute("stroke", isPersistent ? strkColor : "#ffffff");
+                    circle.setAttribute("stroke-width", isKeyRoot ? "2" : "1.5");
+                }, 200);
+            }
+        });
+        
         group.appendChild(indicator);
 
         if (!isPersistent) {
