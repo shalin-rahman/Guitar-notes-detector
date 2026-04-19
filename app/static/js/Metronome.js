@@ -10,6 +10,8 @@ export default class Metronome {
         this.isPlaying = false;
         
         this.onTick = null; // Callback for visual pulse
+        this.soundType = 'beep'; // beep, woodblock, tick
+        this.beatsPerMeasure = 4;
     }
 
     initAudio() {
@@ -29,7 +31,7 @@ export default class Metronome {
         const secondsPerBeat = 60.0 / this.bpm;
         this.nextTickTime += secondsPerBeat;
         this.currentTick++;
-        if (this.currentTick === 4) this.currentTick = 0;
+        if (this.currentTick >= this.beatsPerMeasure) this.currentTick = 0;
     }
 
     scheduleTick(beatNumber, time) {
@@ -37,9 +39,19 @@ export default class Metronome {
         const envelope = this.audioContext.createGain();
 
         osc.frequency.value = beatNumber === 0 ? 1000 : 800;
-        envelope.gain.value = 1;
-        envelope.gain.exponentialRampToValueAtTime(1, time);
-        envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+        
+        if (this.soundType === 'woodblock') {
+            osc.type = 'square';
+            osc.frequency.value = beatNumber === 0 ? 800 : 600;
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+        } else if (this.soundType === 'tick') {
+            osc.type = 'sawtooth';
+            osc.frequency.value = beatNumber === 0 ? 2000 : 1500;
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+        } else {
+            osc.type = 'sine';
+            envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+        }
 
         osc.connect(envelope);
         envelope.connect(this.audioContext.destination);

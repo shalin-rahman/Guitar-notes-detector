@@ -134,15 +134,20 @@ export default class FretboardManager {
     findBestPosition(noteName) {
         const positions = [];
         for (let s = 0; s < this.strings.length; s++) {
-            for (let f = 0; f <= this.numFrets; f++) {
-                const currentNote = this.getNoteAt(s, f);
-                if (!currentNote) continue;
-                if (currentNote === noteName || currentNote.replace(/[0-9]/g, '') === noteName) {
-                    positions.push({ string: s, fret: f, note: currentNote });
-                }
-            }
+            const pos = this.findPositionOnString(noteName, s);
+            if (pos) positions.push(pos);
         }
         return positions.sort((a, b) => a.fret - b.fret)[0];
+    }
+
+    findPositionOnString(noteName, stringIdx) {
+        for (let f = 0; f <= this.numFrets; f++) {
+            const currentNote = this.getNoteAt(stringIdx, f);
+            if (currentNote && (currentNote === noteName || currentNote.replace(/[0-9]/g, '') === noteName)) {
+                return { string: stringIdx, fret: f, note: currentNote };
+            }
+        }
+        return null;
     }
 
     showScale(noteNames, bounds = null) {
@@ -178,6 +183,20 @@ export default class FretboardManager {
         this.render();
     }
 
+    showVoicing(positions) {
+        this.persistentNotes = [];
+        positions.forEach(p => {
+            const note = this.getNoteAt(p.s, p.f);
+            if (note) {
+                this.persistentNotes.push({ 
+                    note: note, 
+                    pos: { string: p.s, fret: p.f, isRoot: false, interval: null } 
+                });
+            }
+        });
+        this.render();
+    }
+
     clearOverlay() {
         this.persistentNotes = [];
         this.render();
@@ -187,14 +206,30 @@ export default class FretboardManager {
         const stringEl = this.container.querySelector(`[data-str="${stringIdx}"]`);
         if (!stringEl) return;
         stringEl.style.stroke = '#ffd700';
-        stringEl.style.filter = 'drop-shadow(0 0 4px #ffd700)';
+        stringEl.style.filter = 'drop-shadow(0 0 8px #ffd700)';
+        stringEl.style.transition = 'all 0.1s ease';
+        
+        // Vibrate effect
+        const originalY = parseFloat(stringEl.getAttribute('y1'));
+        stringEl.setAttribute('y1', originalY + 1.5);
+        stringEl.setAttribute('y2', originalY + 1.5);
+        
         setTimeout(() => {
             stringEl.style.stroke = '';
             stringEl.style.filter = '';
-        }, 600);
+            stringEl.setAttribute('y1', originalY);
+            stringEl.setAttribute('y2', originalY);
+        }, 150);
     }
 
-    drawNoteIndicator(noteName, pos, isPersistent = false) {
+    showNote(noteName, duration = 800) {
+        const pos = this.findBestPosition(noteName);
+        if (pos) {
+            this.drawNoteIndicator(noteName, pos, false, duration);
+        }
+    }
+
+    drawNoteIndicator(noteName, pos, isPersistent = false, duration = 800) {
         const group = this.container.querySelector('#note-indicators');
         if (!group) return;
 
@@ -235,7 +270,8 @@ export default class FretboardManager {
         circle.setAttribute("fill-opacity", "1");
         
         // Sleek contrast borders: Root gets heavy bright rim, others get a clean thin dark rim
-        circle.setAttribute("stroke", isKeyRoot ? "#ffffff" : "rgba(0,0,0,0.4)");
+        const strokeColor = isKeyRoot ? "#ffffff" : "rgba(0,0,0,0.4)";
+        circle.setAttribute("stroke", strokeColor);
         circle.setAttribute("stroke-width", isKeyRoot ? "2.5" : "1");
         
         // Drop shadow for everything to pop off the wood
@@ -248,11 +284,10 @@ export default class FretboardManager {
         // Text contrasting logic: All text large and bold
         text.setAttribute("fill", "#ffffff");
         text.style.textShadow = "0px 1px 2px rgba(0,0,0,0.8)"; // Text shadow for guaranteed legibility!
-        text.setAttribute("font-size", "11");
-        text.setAttribute("font-weight", "800");
+        text.setAttribute("font-size", isPersistent ? "9.5px" : "11px");
         text.setAttribute("text-anchor", "middle");
-        text.setAttribute("dominant-baseline", "central");
-        text.setAttribute("font-family", "Outfit, sans-serif");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("font-weight", "800");
         
         // Display functional intervals instead of note text if toggled AND this is a persistently calculated scale degree
         let displayValue = label;
@@ -276,8 +311,8 @@ export default class FretboardManager {
                 circle.setAttribute("stroke", "#ffffff");
                 circle.setAttribute("stroke-width", "3");
                 setTimeout(() => {
-                    circle.setAttribute("stroke", isPersistent ? strkColor : "#ffffff");
-                    circle.setAttribute("stroke-width", isKeyRoot ? "2" : "1.5");
+                    circle.setAttribute("stroke", strokeColor);
+                    circle.setAttribute("stroke-width", isKeyRoot ? "2.5" : "1");
                 }, 200);
             }
         });
@@ -288,15 +323,15 @@ export default class FretboardManager {
             setTimeout(() => {
                 circle.setAttribute("fill", "rgba(255,215,0,0.2)");
                 circle.setAttribute("r", "6");
-                setTimeout(() => indicator.remove(), 250);
-            }, 800);
+                setTimeout(() => indicator.remove(), duration / 4);
+            }, duration);
         }
     }
 
-    showNote(noteName, position = null) {
-        const pos = position || this.findBestPosition(noteName);
+    showNote(noteName, duration = 800) {
+        const pos = this.findBestPosition(noteName);
         if (!pos) return null;
-        this.drawNoteIndicator(noteName, pos, false);
+        this.drawNoteIndicator(noteName, pos, false, duration);
         return pos;
     }
 

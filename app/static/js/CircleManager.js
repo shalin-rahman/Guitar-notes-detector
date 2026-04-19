@@ -1,106 +1,132 @@
-import FretboardManager from './FretboardManager.js';
 import AppConfig from './AppConfig.js';
+import FretboardManager from './FretboardManager.js';
 
 export default class CircleManager {
-    constructor(containerId, appRef) {
+    constructor(containerId, appRef = null) {
         this.container = document.getElementById(containerId);
         this.appRef = appRef;
-        this.activeKeyIndex = -1;
-        this.activeMode = 'major';
         
-        this.fretboard = new FretboardManager('cof-fretboard');
-
+        // Use dedicated fretboard if available on screen, else fallback to global
+        const dedicatedFb = document.getElementById('cof-fretboard');
+        if (dedicatedFb) {
+            this.fretboard = new FretboardManager('cof-fretboard');
+        } else {
+            this.fretboard = appRef ? appRef.fretboard : null;
+        }
         this.keys = [
-            { maj: 'C',  min: 'Am',  sig: '0 Sharps/Flats' },
-            { maj: 'G',  min: 'Em',  sig: '1 Sharp (F#)' },
-            { maj: 'D',  min: 'Bm',  sig: '2 Sharps (F#, C#)' },
-            { maj: 'A',  min: 'F#m', sig: '3 Sharps (F#, C#, G#)' },
-            { maj: 'E',  min: 'C#m', sig: '4 Sharps (F#, C#, G#, D#)' },
-            { maj: 'B',  min: 'G#m', sig: '5 Sharps (F#, C#, G#, D#, A#)' },
-            { maj: 'F#', min: 'D#m', sig: '6 Sharps (F#, C#, G#, D#, A#, E#)' },
-            { maj: 'Db', min: 'Bbm', sig: '5 Flats (Bb, Eb, Ab, Db, Gb)' },
-            { maj: 'Ab', min: 'Fm',  sig: '4 Flats (Bb, Eb, Ab, Db)' },
-            { maj: 'Eb', min: 'Cm',  sig: '3 Flats (Bb, Eb, Ab)' },
-            { maj: 'Bb', min: 'Gm',  sig: '2 Flats (Bb, Eb)' },
-            { maj: 'F',  min: 'Dm',  sig: '1 Flat (Bb)' }
+            { maj: 'C', min: 'Am' }, { maj: 'G', min: 'Em' }, { maj: 'D', min: 'Bm' },
+            { maj: 'A', min: 'F#m' }, { maj: 'E', min: 'C#m' }, { maj: 'B', min: 'G#m' },
+            { maj: 'Gb', min: 'Ebm' }, { maj: 'Db', min: 'Bbm' }, { maj: 'Ab', min: 'Fm' },
+            { maj: 'Eb', min: 'Cm' }, { maj: 'Bb', min: 'Gm' }, { maj: 'F', min: 'Dm' }
         ];
 
         this.elements = {
             title: document.getElementById('cof-key-title'),
             sig: document.getElementById('cof-key-sig'),
-            relMin: document.getElementById('cof-relative-minor'),
+            scaleNotes: document.getElementById('cof-scale-notes'),
+            relMinor: document.getElementById('cof-relative-minor'),
             diatonic: document.getElementById('cof-diatonic-chords'),
             playBtn: document.getElementById('cof-play-scale'),
             intervalsToggle: document.getElementById('cof-intervals-toggle'),
             voicingsToggle: document.getElementById('cof-show-voicings'),
             quizToggle: document.getElementById('cof-quiz-mode'),
             scaleSelect: document.getElementById('cof-scale-select'),
-            
-            // Quiz UI
+            positionFilters: document.getElementById('cof-position-filters'),
+            extractPentaBtn: document.getElementById('cof-extract-penta'),
+            quizType: document.getElementById('quiz-type'),
             quizModule: document.getElementById('quiz-module'),
             quizPrompt: document.getElementById('quiz-prompt'),
             quizStatus: document.getElementById('quiz-status'),
             quizStartBtn: document.getElementById('quiz-start-btn')
         };
 
+        this.activeKeyIndex = -1;
+        this.activeMode = 'major';
+        this.currentScaleNotes = [];
+        this.currentRot = 0;
         this.quizActive = false;
         this.targetNote = null;
-        this.targetChord = null; // Triad array
-        this.quizType = 'note'; // 'note' or 'chord'
 
         this.initScaleSelector();
         this.render();
         this.bindEvents();
-        
-        // Default to C Major so fretboard is visibly rendered immediately
-        setTimeout(() => this.selectKey(0), 100);
     }
 
     render() {
-        const size = 500;
+        if (!this.container) return;
+        const size = 600; 
         const center = size / 2;
-        const outerRadius = 220;
-        const midRadius = 140;
-        const innerRadius = 60;
+        const outerRadius = 200;
+        const midRadius = 135;
+        const innerRadius = 75;
 
-        let svg = `<svg viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" class="cof-svg">`;
-        svg += `<defs>
-            <filter id="cof-glow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="cof-shadow"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.5"/></filter>
-        </defs>`;
+        let svg = `<svg viewBox="0 0 ${size} ${size}" class="cof-svg" id="circle-svg" style="overflow: visible;">
+            <defs>
+                <filter id="cof-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="5" />
+                    <feOffset dx="0" dy="0" result="offsetblur" />
+                    <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+            </defs>`;
 
-        // Draw segments
+        // 1. ROTATING WHEEL GROUP
+        svg += `<g id="cof-wheel" style="transition: transform 0.6s cubic-bezier(0.5, 0, 0.5, 1); transform-origin: ${center}px ${center}px;">`;
+        
+        const romanMap = ['I', 'V', 'II', 'VI', 'III', 'VII', 'IV#', 'Db', 'Ab', 'Eb', 'Bb', 'F']; 
+        
         for (let i = 0; i < 12; i++) {
             const angleStart = (i * 30 - 15 - 90) * Math.PI / 180;
             const angleEnd = ((i + 1) * 30 - 15 - 90) * Math.PI / 180;
+            const majKey = this.keys[i].maj;
+            const baseColor = AppConfig.CHROMATIC_COLORS[majKey] || '#444';
 
-            // Outer Segment (Major)
+            // Outer Major Segment (Restoring Chromatic Colors with high visibility)
             const outerPath = this.createSegmentPath(center, center, midRadius, outerRadius, angleStart, angleEnd);
-            svg += `<path d="${outerPath}" class="cof-segment cof-maj" data-idx="${i}" data-mode="major" fill="rgba(255, 255, 255, 0.05)" stroke="var(--glass-border)" stroke-width="2" />`;
+            svg += `<path d="${outerPath}" class="cof-segment cof-maj" data-idx="${i}" data-mode="major" fill="${baseColor}" fill-opacity="0.8" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" />`;
 
-            // Inner Segment (Minor)
+            // Inner Minor Segment
             const innerPath = this.createSegmentPath(center, center, innerRadius, midRadius, angleStart, angleEnd);
-            svg += `<path d="${innerPath}" class="cof-segment cof-min" data-idx="${i}" data-mode="minor" fill="rgba(0, 0, 0, 0.2)" stroke="var(--glass-border)" stroke-width="2" />`;
+            svg += `<path d="${innerPath}" class="cof-segment cof-min" data-idx="${i}" data-mode="minor" fill="${baseColor}" fill-opacity="0.4" stroke="rgba(255,255,255,0.1)" stroke-width="1" />`;
 
-            // Text Placement
             const textAngle = (i * 30 - 90) * Math.PI / 180;
             const majX = center + Math.cos(textAngle) * (midRadius + (outerRadius - midRadius) / 2);
-            const majY = center + Math.sin(textAngle) * (midRadius + (outerRadius - midRadius) / 2) + 6;
-            
+            const majY = center + Math.sin(textAngle) * (midRadius + (outerRadius - midRadius) / 2);
             const minX = center + Math.cos(textAngle) * (innerRadius + (midRadius - innerRadius) / 2);
-            const minY = center + Math.sin(textAngle) * (innerRadius + (midRadius - innerRadius) / 2) + 5;
+            const minY = center + Math.sin(textAngle) * (innerRadius + (midRadius - innerRadius) / 2);
 
-            svg += `<text x="${majX}" y="${majY - 6}" class="cof-text cof-maj-text" data-idx="${i}" data-mode="major">${this.keys[i].maj}</text>`;
-            svg += `<text x="${majX}" y="${majY + 12}" class="cof-text cof-roman cof-maj-roman" data-idx="${i}" data-mode="major" fill="rgba(255,215,0,0.8)" font-size="12" font-weight="700"></text>`;
-
-            svg += `<text x="${minX}" y="${minY - 4}" class="cof-text cof-min-text" data-idx="${i}" data-mode="minor">${this.keys[i].min}</text>`;
-            svg += `<text x="${minX}" y="${minY + 10}" class="cof-text cof-roman cof-min-roman" data-idx="${i}" data-mode="minor" fill="rgba(200,200,200,0.8)" font-size="10" font-weight="700"></text>`;
+            // Upright Key Labels (Straight as requested)
+            svg += `<text x="${majX}" y="${majY}" class="cof-text cof-maj-text" data-idx="${i}" data-mode="major" style="transform-origin: ${majX}px ${majY}px; font-weight: 800; font-size: 18px;">${this.keys[i].maj}</text>`;
+            svg += `<text x="${minX}" y="${minY}" class="cof-text cof-min-text" data-idx="${i}" data-mode="minor" style="transform-origin: ${minX}px ${minY}px; font-weight: 600; font-size: 13px;">${this.keys[i].min}</text>`;
         }
+        svg += `</g>`;
 
-        // Center hub
-        svg += `<circle cx="${center}" cy="${center}" r="${innerRadius}" fill="var(--bg-color)" stroke="var(--glass-border)" stroke-width="2" filter="url(#cof-shadow)"/>`;
-        svg += `<text x="${center}" y="${center + 2}" class="cof-center-text" text-anchor="middle" dominant-baseline="middle">Key</text>`;
+        // 2. STATIC GROUP (The stationary parts)
+        svg += `<g id="cof-static">
+            <circle cx="${center}" cy="${center}" r="${innerRadius}" fill="var(--bg-color)" stroke="var(--glass-border)" stroke-width="2" filter="url(#cof-shadow)"/>
+            <text x="${center}" y="${center}" class="cof-center-text" text-anchor="middle" dominant-baseline="middle" fill="var(--primary)" font-weight="900" font-size="24">KEY</text>
+            
+            <!-- Global Pointer -->
+            <path d="M ${center-14} ${center-outerRadius-12} L ${center+14} ${center-outerRadius-12} L ${center} ${center-outerRadius+10} Z" fill="var(--primary)" />
+            
+            <!-- STATIC FUNCTIONAL ROMANS -->`;
+        
+        const romans = [
+            { pos: 0, maj: 'I', min: 'vi' },
+            { pos: 1, maj: 'V', min: 'iii' },
+            { pos: -1, maj: 'IV', min: 'ii' },
+            { pos: 5, maj: '', min: 'vii°' }
+        ];
 
+        romans.forEach(r => {
+            const angle = (r.pos * 30 - 90) * Math.PI / 180;
+            const rX = center + Math.cos(angle) * (outerRadius + 42);
+            const rY = center + Math.sin(angle) * (outerRadius + 42);
+            if (r.maj) svg += `<text x="${rX}" y="${rY - 8}" class="static-roman" fill="var(--primary)" font-size="22" font-weight="900" text-anchor="middle" dominant-baseline="middle" style="text-shadow:0 0 12px var(--primary-glow)">${r.maj}</text>`;
+            if (r.min) svg += `<text x="${rX}" y="${rY + 12}" class="static-roman" fill="#aaa" font-size="16" font-weight="700" text-anchor="middle" dominant-baseline="middle">${r.min}</text>`;
+        });
+
+        svg += `</g>`;
+        svg += `<g id="cof-neighborhood"></g>`;
         svg += `</svg>`;
         this.container.innerHTML = svg;
     }
@@ -111,21 +137,17 @@ export default class CircleManager {
         const x1Out = cx + rOut * Math.cos(aStart), y1Out = cy + rOut * Math.sin(aStart);
         const x2Out = cx + rOut * Math.cos(aEnd), y2Out = cy + rOut * Math.sin(aEnd);
         const largeArc = (aEnd - aStart) > Math.PI ? 1 : 0;
-        
         return `M ${x1In} ${y1In} L ${x1Out} ${y1Out} A ${rOut} ${rOut} 0 ${largeArc} 1 ${x2Out} ${y2Out} L ${x2In} ${y2In} A ${rIn} ${rIn} 0 ${largeArc} 0 ${x1In} ${y1In} Z`;
     }
 
     initScaleSelector() {
         if (!this.elements.scaleSelect) return;
-        const options = AppConfig.SCALE_DEFINITIONS.map(s => `<option value="${s.name}">${s.name}</option>`);
-        this.elements.scaleSelect.innerHTML = options.join('');
-        // Default to Major
+        this.elements.scaleSelect.innerHTML = AppConfig.SCALE_DEFINITIONS.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
         this.elements.scaleSelect.value = "Major (Ionian)";
     }
 
     bindEvents() {
-        const segments = this.container.querySelectorAll('.cof-segment');
-        segments.forEach(seg => {
+        this.container.querySelectorAll('.cof-segment').forEach(seg => {
             seg.addEventListener('click', (e) => {
                 const idx = parseInt(e.target.getAttribute('data-idx'));
                 const mode = e.target.getAttribute('data-mode') || 'major';
@@ -136,46 +158,31 @@ export default class CircleManager {
         this.elements.playBtn.addEventListener('click', () => {
             if (this.activeKeyIndex !== -1 && this.appRef) {
                 const k = this.keys[this.activeKeyIndex];
-                const rootName = this.activeMode === 'major' ? k.maj : k.min;
-                const scaleName = this.elements.scaleSelect.value;
-                this.appRef.triggerScale(scaleName, rootName.replace('m', ''));
+                this.appRef.triggerScale(this.elements.scaleSelect.value, this.activeMode === 'major' ? k.maj : k.min);
             }
         });
 
-        // Scale Select Change
-        if (this.elements.scaleSelect) {
-            this.elements.scaleSelect.addEventListener('change', () => {
-                if (this.activeKeyIndex !== -1) {
-                    this.selectKey(this.activeKeyIndex);
-                }
-            });
-        }
+        this.elements.intervalsToggle.addEventListener('change', (e) => {
+            if (this.appRef && this.appRef.fretboard) this.appRef.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
+        });
 
-        // Interval Toggle Logic
-        if (this.elements.intervalsToggle) {
-            this.elements.intervalsToggle.addEventListener('change', (e) => {
-                this.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
-            });
-        }
+        this.elements.quizToggle.addEventListener('change', (e) => {
+            this.elements.quizModule.style.display = e.target.checked ? 'block' : 'none';
+            if (!e.target.checked) this.stopQuiz();
+        });
 
-        // Quiz Mode
-        if (this.elements.quizToggle) {
-            this.elements.quizToggle.addEventListener('change', (e) => {
-                this.elements.quizModule.style.display = e.target.checked ? 'block' : 'none';
-                if (!e.target.checked) this.stopQuiz();
-            });
-        }
+        this.elements.quizStartBtn.addEventListener('click', () => {
+            if (this.quizActive) this.stopQuiz();
+            else this.startQuiz();
+        });
 
-        if (this.elements.quizStartBtn) {
-            this.elements.quizStartBtn.addEventListener('click', () => {
-                if (this.quizActive) this.stopQuiz();
-                else this.startQuiz();
-            });
+        if (this.elements.extractPentaBtn) {
+            this.elements.extractPentaBtn.addEventListener('click', () => this.extractPentatonic());
         }
     }
 
     startQuiz() {
-        if (this.currentKeyIndex === null) {
+        if (this.activeKeyIndex === -1) {
             this.elements.quizStatus.textContent = "Please select a key on the circle first!";
             return;
         }
@@ -194,32 +201,30 @@ export default class CircleManager {
 
     nextQuizRound() {
         if (!this.quizActive) return;
-        
-        // Pick a random note from the current scale
+        const type = this.elements.quizType.value;
         const randIdx = Math.floor(Math.random() * this.currentScaleNotes.length);
         this.targetNote = this.currentScaleNotes[randIdx];
-        
-        this.elements.quizPrompt.textContent = `Find: ${this.targetNote}`;
-        this.elements.quizStatus.textContent = "Listen and play on your guitar...";
-        
-        // Play the target note so user hears it (Ear Training!)
-        if (this.appRef && this.appRef.player) {
-            this.appRef.player.playNote(this.targetNote + "4");
+
+        if (type === 'degree') {
+            const degrees = ['1st (Root)', '2nd', '3rd', '4th', '5th', '6th', '7th'];
+            this.elements.quizPrompt.textContent = `Find: ${degrees[randIdx]}`;
+        } else {
+            this.elements.quizPrompt.textContent = `Find: ???`; 
+            if (this.appRef && this.appRef.player) this.appRef.player.playNote(this.targetNote + "4");
         }
+        this.elements.quizStatus.textContent = "Play it on your guitar...";
     }
 
     handleDetectedNote(noteName) {
         if (!this.quizActive || !this.targetNote) return;
-        
-        const detectedBase = noteName.replace(/[0-9]/g, '');
-        if (detectedBase === this.targetNote) {
-            // Success!
+        const noteOnly = noteName.replace(/[0-9]/g, '');
+        if (noteOnly === this.targetNote) {
             this.elements.quizPrompt.textContent = "CORRECT! ✨";
             this.elements.quizStatus.textContent = `Great! That was indeed ${this.targetNote}`;
-            
-            // Visual celebration on fretboard
-            this.fretboard.showNote(noteName);
-            
+            if (this.fretboard) {
+                this.fretboard.showScale([this.targetNote]);
+                this.fretboard.pluckString(0); // visual ping
+            }
             this.targetNote = null;
             setTimeout(() => this.nextQuizRound(), 1500);
         }
@@ -231,180 +236,182 @@ export default class CircleManager {
         const k = this.keys[idx];
         const rootNote = this.activeMode === 'major' ? k.maj : k.min;
         
-        // Find selected scale definition
+        const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'F#m': 'F#', 'C#m': 'C#', 'G#m': 'G#', 'Ebm': 'D#', 'Bbm': 'A#', 'Fm': 'F', 'Cm': 'C', 'Gm': 'G', 'Dm': 'D', 'Am': 'A', 'Em': 'E', 'Bm': 'B' };
+        let searchNote = rootNote.replace('m', '');
+        if (flatMap[rootNote]) searchNote = flatMap[rootNote].replace('m', '');
+        const rootIdx = AppConfig.NOTE_NAMES.indexOf(searchNote);
+        
+        const rot = -idx * 30;
+        const wheel = document.getElementById('cof-wheel');
+        if (wheel) wheel.style.transform = `rotate(${rot}deg)`;
+        
+        this.container.querySelectorAll('.cof-text').forEach(el => {
+            el.style.transform = `rotate(${-rot}deg)`;
+            el.style.transition = 'transform 0.6s cubic-bezier(0.5, 0, 0.5, 1)';
+        });
+
+        this.elements.title.textContent = `${rootNote} ${this.activeMode === 'major' ? 'Major (Ionian)' : 'Minor (Aeolian)'}`;
+        this.elements.relMinor.textContent = `Relative ${this.activeMode === 'major' ? 'Minor' : 'Major'}: ${this.activeMode === 'major' ? k.min : k.maj}`;
+        
         const scaleDef = AppConfig.SCALE_DEFINITIONS.find(s => s.name === this.elements.scaleSelect.value) || AppConfig.SCALE_DEFINITIONS[0];
         const intervals = scaleDef.intervals || scaleDef.arohan || [0];
-
-        // Convert flat to sharp for exact array mapping
-        const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
-        let searchNote = flatMap[rootNote] || rootNote;
         
-        const rootIdx = AppConfig.NOTE_NAMES.indexOf(searchNote);
+        const currentNotes = intervals.map(inter => AppConfig.NOTE_NAMES[(rootIdx + inter) % 12]);
+        if (this.elements.scaleNotes) {
+            this.elements.scaleNotes.innerHTML = currentNotes.map(n => 
+                `<button class="note-pill-btn" onclick="window.AhordianApp.circleManager.showNote('${n}')">${n}</button>`
+            ).join(' ');
+        }
+        this.currentScaleNotes = currentNotes;
+        const formulaMap = { 0: '1', 1: 'b2', 2: '2', 3: 'b3', 4: '3', 5: '4', 6: '#4', 7: '5', 8: 'b6', 9: '6', 10: 'b7', 11: '7' };
+        
+        // Advanced: Calculate Key Signature (Sharps/Flats)
+        const sigData = this.getKeySignatureDetails(idx);
+        let sigText = sigData.count === 0 ? "Natural Key" : `${sigData.count} ${sigData.type === '#' ? "Sharps (#)" : "Flats (b)"}`;
+        if (sigData.notes.length > 0) {
+            sigText += ` <span style="font-size:0.7rem; color:var(--primary); opacity:0.8;">(${sigData.notes.join(', ')})</span>`;
+        }
+        
         const roman = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+        this.updatePositionFilters(rootIdx, rootNote);
+        this.fretboard.showScale(this.currentScaleNotes);
         
-        // Interactive Diatonic Chord Buttons
-        const diatonicArray = intervals.map((interval, index) => {
+        // UI Display
+        this.elements.sig.innerHTML = `<span style="color:var(--primary)">Signature:</span> ${sigText} <br> <span style="color:var(--text-muted); font-size:0.75rem;">Formula: ${intervals.map(i => formulaMap[i % 12] || i).join(' ')}</span>`;
+
+        this.elements.diatonic.innerHTML = intervals.map((interval, index) => {
             const chordRootName = AppConfig.NOTE_NAMES[(rootIdx + interval) % 12];
-            const isMinor = roman[index].toLowerCase() === roman[index]; // simple check
-            const isDim = roman[index].includes('°');
-            
-            // Build the triad for visual highlight
+            const label = roman[index] || (index + 1);
+            const isMinor = label.toLowerCase() === label;
+            const isDim = label.includes('°');
             const triadIntervals = isDim ? [0, 3, 6] : (isMinor ? [0, 3, 7] : [0, 4, 7]);
             const chordIdx = AppConfig.NOTE_NAMES.indexOf(chordRootName);
             const triadNotes = triadIntervals.map(i => AppConfig.NOTE_NAMES[(chordIdx + i) % 12]);
             const btnData = JSON.stringify(triadNotes).replace(/"/g, '&quot;');
-            
-            return `<button class="cof-chord-btn" onclick="window.AhordianApp.circleManager.playDiatonicChord('${chordRootName}', ${btnData})"><strong>${roman[index]}</strong><br>${chordRootName}${isMinor && !isDim ? 'm' : ''}${isDim ? 'dim' : ''}</button>`;
-        });
+            return `<button class="cof-chord-btn" onclick="window.AhordianApp.circleManager.playDiatonicChord('${chordRootName}', ${btnData})"><strong>${label}</strong><br>${chordRootName}${isMinor && !isDim ? 'm' : ''}${isDim ? 'dim' : ''}</button>`;
+        }).join('');
 
-        // Calculate CAGED anchor frets (Standard Tuning assumption)
-        const eFret = (rootIdx - AppConfig.NOTE_NAMES.indexOf('E') + 12) % 12;
-        const aFret = (rootIdx - AppConfig.NOTE_NAMES.indexOf('A') + 12) % 12;
-        const dFret = (rootIdx - AppConfig.NOTE_NAMES.indexOf('D') + 12) % 12;
-        
-        const cFret = (aFret - 3 + 12) % 12 || 12;
-        const aFrame = aFret || 12;
-        const gFret = (eFret - 3 + 12) % 12 || 12;
-        const eFrame = eFret || 12;
-        const dFrame = dFret || 12;
+        this.updateHarmonicNeighborhood(idx);
 
-        // Create interactive CAGED filter buttons
-        const createCagedBtn = (shape, fretPos) => {
-            const minFreq = Math.max(0, fretPos - 1);
-            const maxFreq = minFreq + 4; // 4-fret span
-            return `<button class="caged-btn" onclick="window.AhordianApp.circleManager.filterCAGED(${minFreq}, ${maxFreq}, this)"><strong>${shape}</strong>-Shape (Fr ${fretPos})</button>`;
-        };
-
-        const cagedHtml = `
-            ${createCagedBtn('C', cFret)}
-            ${createCagedBtn('A', aFrame)}
-            ${createCagedBtn('G', gFret)}
-            ${createCagedBtn('E', eFrame)}
-            ${createCagedBtn('D', dFrame)}
-        `;
-
-        // Update UI info panel
-        this.elements.title.textContent = `${rootNote} ${scaleDef.name}`;
-        this.elements.sig.innerHTML = `<strong>Signature:</strong> ${k.sig}`;
-        this.elements.relMin.innerHTML = `<strong>Relative Minor:</strong> ${k.min}`;
-        
-        // Inject grid HTML
-        if (scaleDef.name.includes("Major") || scaleDef.name.includes("Minor") || scaleDef.name.includes("Lydian") || scaleDef.name.includes("Dorian")) {
-             this.elements.diatonic.innerHTML = `
-                <strong>Diatonic Triads:</strong>
-                <div class="cof-chord-grid">${diatonicArray.join('')}</div>
-                <strong>Visual CAGED Filters:</strong>
-                <div class="caged-grid">${cagedHtml}</div>
-            `;
-        } else {
-            // Highlighting non-diatonic scales (Raags/Pentatonics)
-            this.elements.diatonic.innerHTML = `
-                <strong>Visual CAGED Filters:</strong>
-                <div class="caged-grid">${cagedHtml}</div>
-            `;
-        }
-        
         this.elements.playBtn.disabled = false;
-        
-        // Save current scale for later filtering
-        this.currentScaleNotes = intervals.map(inter => AppConfig.NOTE_NAMES[(rootIdx + inter) % 12]);
-        
-        // CSS Animation & Active State Reset
-        this.container.querySelectorAll('.cof-segment').forEach(el => {
-            el.classList.remove('active');
-            el.style.fill = ''; // reset inline styles
-        });
-        this.container.querySelectorAll('.cof-text').forEach(el => {
-            el.classList.remove('active');
-            el.style.fill = '';
-        });
-
-        // Apply active state to the specific selected key
-        this.container.querySelectorAll(`.cof-segment[data-idx="${idx}"]`).forEach(el => el.classList.add('active'));
-        this.container.querySelectorAll(`.cof-text[data-idx="${idx}"]`).forEach(el => el.classList.add('active'));
-        
-        // Highlight Diatonic Neighbors (IV and V slice)
-        const leftIdx = (idx - 1 + 12) % 12;
-        const rightIdx = (idx + 1) % 12;
-        [leftIdx, rightIdx].forEach(neighborIdx => {
-            this.container.querySelectorAll(`.cof-segment[data-idx="${neighborIdx}"]`).forEach(el => {
-                el.style.fill = 'rgba(255, 215, 0, 0.15)'; // Golden neighbor highlight
-            });
-            this.container.querySelectorAll(`.cof-maj-text[data-idx="${neighborIdx}"], .cof-min-text[data-idx="${neighborIdx}"]`).forEach(el => {
-                el.style.fill = 'rgba(255, 215, 0, 0.7)';
-            });
-        });
-
-        // ----------------------------------------
-        // Dynamically Inject Roman Numerals into SVG
-        // ----------------------------------------
-        this.container.querySelectorAll('.cof-roman').forEach(el => el.textContent = '');
-        
-        const setRoman = (i, mode, text) => {
-            const el = this.container.querySelector(`.cof-${mode}-roman[data-idx="${i}"]`);
-            if (el) el.textContent = text;
-        };
-
-        // Major Mode Chords
-        setRoman(idx, 'maj', 'I');
-        setRoman(leftIdx, 'maj', 'IV');
-        setRoman(rightIdx, 'maj', 'V');
-        
-        // Minor Mode Chords
-        setRoman(idx, 'min', 'vi');
-        setRoman(leftIdx, 'min', 'ii');
-        setRoman(rightIdx, 'min', 'iii');
-        
-        // Diminished Chord (Right + 1 on Inner Ring)
-        const dimIdx = (idx + 2) % 12;
-        setRoman(dimIdx, 'min', 'vii°');
-
-        // Optional spin alignment animation (rotates the SVG to put selected key at top)
-        const rotateAngle = -idx * 30;
-        const svgEl = this.container.querySelector('svg');
-        if (svgEl) {
-            svgEl.style.transform = `rotate(${rotateAngle}deg)`;
+        if (this.elements.extractPentaBtn) {
+            this.elements.extractPentaBtn.disabled = (intervals.length !== 7);
         }
+    }
+
+    getKeySignatureDetails(idx) {
+        // Circle sequence: C G D A E B Gb Db Ab Eb Bb F
+        // Indices:         0 1 2 3 4 5  6  7  8  9 10 11
+        const sharpOrder = ['F#', 'C#', 'G#', 'D#', 'A#', 'E#', 'B#'];
+        const flatOrder = ['Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb', 'Fb'];
         
-        // Keep the text upright despite SVG rotation!
-        this.container.querySelectorAll('.cof-text').forEach(t => {
-            t.style.transform = `rotate(${-rotateAngle}deg)`;
-            t.style.transformOrigin = `${t.getAttribute('x')}px ${t.getAttribute('y')}px`;
+        if (idx === 0) return { count: 0, type: '', notes: [] };
+        if (idx <= 5) return { count: idx, type: '#', notes: sharpOrder.slice(0, idx) };
+        if (idx === 6) return { count: 6, type: 'b', notes: flatOrder.slice(0, 6) }; // Gb
+        return { count: 12 - idx, type: 'b', notes: flatOrder.slice(0, 12 - idx) };
+    }
+
+    updateHarmonicNeighborhood(idx) {
+        const neighbors = [(idx + 11) % 12, idx, (idx + 1) % 12];
+        
+        this.container.querySelectorAll('.cof-segment').forEach(el => {
+            const elIdx = parseInt(el.getAttribute('data-idx'));
+            const isNeighbor = neighbors.includes(elIdx);
+            
+            el.classList.remove('active', 'inactive-shroud');
+            if (isNeighbor) {
+                el.classList.add('active');
+                el.style.stroke = 'var(--primary)';
+                el.style.strokeWidth = elIdx === idx ? '3' : '1.5';
+            } else {
+                el.classList.add('inactive-shroud');
+                el.style.stroke = 'rgba(255,255,255,0.1)';
+                el.style.strokeWidth = '1';
+            }
         });
+
+        // Add a visual "Neighborhood" container/effect
+        const group = document.getElementById('cof-neighborhood');
+        if (group) {
+            const size = 600; const center = size / 2;
+            const outerRadius = 215;
+            const innerRadius = 65;
+            
+            const startAngle = (idx * 30 - 45 - 90) * Math.PI / 180;
+            const endAngle = (idx * 30 + 45 - 90) * Math.PI / 180;
+            
+            const path = this.createSegmentPath(center, center, innerRadius, outerRadius, startAngle, endAngle);
+            group.innerHTML = `<path d="${path}" fill="var(--primary)" fill-opacity="0.05" stroke="var(--primary)" stroke-width="2" stroke-dasharray="5,5" style="pointer-events:none;" />
+                               <text x="${center}" y="${center + innerRadius + 140}" fill="var(--primary)" font-size="10" font-weight="800" text-anchor="middle" style="letter-spacing:1px; opacity:0.6;">HARMONIC NEIGHBORHOOD</text>`;
+        }
+    }
+
+    updatePositionFilters(rootIdx, rootName) {
+        const pos6 = this.fretboard.findPositionOnString(rootName, 5);
+        const pos5 = this.fretboard.findPositionOnString(rootName, 4);
+        let anchorFret = pos6 ? pos6.fret : (pos5 ? pos5.fret : 0);
+        if (anchorFret > 12) anchorFret -= 12;
+
+        const patterns = [
+            { name: "C", min: anchorFret - 3, max: anchorFret + 1 },
+            { name: "A", min: anchorFret - 1, max: anchorFret + 3 },
+            { name: "G", min: anchorFret + 2, max: anchorFret + 6 },
+            { name: "E", min: anchorFret + 5, max: anchorFret + 9 },
+            { name: "D", min: anchorFret + 8, max: anchorFret + 12 }
+        ];
+
+        let html = `<button class="secondary-btn small-btn sample-btn active-box" style="background:var(--primary); color:#000; font-weight:900;" onclick="window.AhordianApp.circleManager.filterByRange(null, null)">HIGHLIGHT ALL</button>`;
+        patterns.forEach(p => {
+            const min = Math.max(0, p.min);
+            const max = p.max;
+            html += `<button class="secondary-btn small-btn sample-btn" onclick="window.AhordianApp.circleManager.filterByRange(${min}, ${max})"><strong>${p.name}</strong><br><span style="font-size:0.6rem; opacity:0.8">Fr ${min}-${max}</span></button>`;
+        });
+
+        [1, 2, 3, 4, 5].forEach(p => {
+            const start = anchorFret + (p-1)*2;
+            html += `<button class="secondary-btn small-btn sample-btn" style="opacity:0.9" onclick="window.AhordianApp.circleManager.filterByRange(${start}, ${start+4})"><strong>P${p}</strong><br><span style="font-size:0.6rem; opacity:0.8">Fr ${start}-${start+4}</span></button>`;
+        });
+        this.elements.positionFilters.innerHTML = html;
         
-        // Render scale overlay on the Circle's localized fretboard instance
-        this.fretboard.showScale(this.currentScaleNotes);
+        // Also populate the duplicate filters on the Main Fretboard screen if it exists
+        const mainFbFilters = document.getElementById('fb-position-filters');
+        if (mainFbFilters) mainFbFilters.innerHTML = html;
+    }
+
+    filterByRange(min, max) {
+        if (min === null) this.fretboard.showScale(this.currentScaleNotes);
+        else this.fretboard.showScale(this.currentScaleNotes, { min, max });
+    }
+
+    showNote(noteName) {
+        this.fretboard.showScale([noteName]);
     }
 
     playDiatonicChord(rootName, triadNotesArray) {
-        // Trigger audio strum globally
-        if (this.appRef) {
-            this.appRef.playSequence([triadNotesArray.join('-')], 100);
-        }
-
-        // Check if we should show a specific guitar voicing
+        if (this.appRef) this.appRef.playSequence([triadNotesArray.join('-')], 100);
         if (this.elements.voicingsToggle && this.elements.voicingsToggle.checked) {
             const isMinor = triadNotesArray.length >= 2 && AppConfig.NOTE_NAMES.indexOf(triadNotesArray[1]) === (AppConfig.NOTE_NAMES.indexOf(triadNotesArray[0]) + 3) % 12;
-            const voicing = AppConfig.CHORD_VOICINGS.find(v => v.name === rootName && v.type === (isMinor ? 'min' : 'maj'));
-            if (voicing) {
-                this.fretboard.showVoicing(voicing.pos);
-                return;
-            }
+            const target = AppConfig.CHORD_VOICINGS.find(v => v.name === rootName && v.type === (isMinor ? 'min' : 'maj'));
+            if (target) { this.fretboard.showVoicing(target.pos); return; }
         }
-
-        // Visually map ONLY the triad to the miniature fretboard (abstract circles)
         this.fretboard.showScale(triadNotesArray);
-        
-        // Remove active state from caged buttons
-        this.elements.diatonic.querySelectorAll('.caged-btn').forEach(b => b.classList.remove('active'));
     }
 
-    filterCAGED(minFret, maxFret, btnEl) {
-        // Toggle button UI
-        this.elements.diatonic.querySelectorAll('.caged-btn').forEach(b => b.classList.remove('active'));
-        if (btnEl) btnEl.classList.add('active');
-
-        // Render the full scale but bounded by CAGED mechanics
-        this.fretboard.showScale(this.currentScaleNotes, { min: minFret, max: maxFret });
+    extractPentatonic() {
+        if (!this.currentScaleNotes || this.currentScaleNotes.length < 7) return;
+        
+        let penta = [];
+        if (this.activeMode === 'major') {
+            // Major Pentatonic: 1, 2, 3, 5, 6 (Remove 4, 7)
+            penta = [this.currentScaleNotes[0], this.currentScaleNotes[1], this.currentScaleNotes[2], this.currentScaleNotes[4], this.currentScaleNotes[5]];
+        } else {
+            // Minor Pentatonic: 1, b3, 4, 5, b7 (Remove 2, 6)
+            penta = [this.currentScaleNotes[0], this.currentScaleNotes[2], this.currentScaleNotes[3], this.currentScaleNotes[4], this.currentScaleNotes[6]];
+        }
+        
+        this.fretboard.showScale(penta);
+        if (this.appRef && this.appRef.tracker) {
+            this.appRef.tracker.addToTicker(`Extracted ${this.activeMode === 'major' ? 'Major' : 'Minor'} Pentatonic: ${penta.join(' ')}`, true);
+        }
     }
 }

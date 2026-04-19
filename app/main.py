@@ -45,7 +45,7 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index():
-    with open(os.path.join(static_path, "index.html"), "r") as f:
+    with open(os.path.join(static_path, "index.html"), "r", encoding="utf-8") as f:
         return f.read()
 
 @app.post("/analyze")

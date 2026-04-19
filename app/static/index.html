@@ -28,8 +28,18 @@
             <div class="metronome-control" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
                 <div id="metronome-light" style="width: 12px; height: 12px; border-radius: 50%; background: #333; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: all 0.1s ease;"></div>
                 <input type="number" id="metronome-bpm" value="120" min="40" max="250" style="width: 50px; background: transparent; border: none; color: var(--primary); font-weight: 800; font-family: 'Outfit'; font-size: 1rem; text-align: center; outline: none;">
-                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">BPM</span>
-                <button id="metronome-toggle" style="background: transparent; border: none; color: var(--text-main); cursor: pointer; font-size: 1.1rem; transition: 0.2s;">⏵</button>
+                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; margin-right: 5px;">BPM</span>
+                <select id="metronome-sound" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; font-family: 'Outfit'; outline: none; cursor: pointer;">
+                    <option value="beep">Beep</option>
+                    <option value="woodblock">Wood</option>
+                    <option value="tick">Tick</option>
+                </select>
+                <select id="metronome-signature" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; font-family: 'Outfit'; outline: none; cursor: pointer;">
+                    <option value="4">4/4</option>
+                    <option value="3">3/4</option>
+                    <option value="6">6/8</option>
+                </select>
+                <button id="metronome-toggle" style="background: transparent; border: none; color: var(--text-main); cursor: pointer; font-size: 1.1rem; transition: 0.2s; margin-left: 5px;">⏵</button>
             </div>
 
             <div class="status-badge" id="mic-status">Microphone Off</div>
@@ -42,6 +52,9 @@
 
                 <section class="visualizer-section">
                     <canvas id="waveform" class="visualizer-canvas"></canvas>
+                    <div class="confidence-container" style="width: 80%; height: 3px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-top: -10px; margin-bottom: 20px; overflow: hidden;">
+                        <div id="confidence-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; box-shadow: 0 0 10px var(--primary-glow);"></div>
+                    </div>
 
                     <div class="tuner-physics-module">
                         <div class="gauge-background">
@@ -157,8 +170,12 @@
             <div class="fb-page">
                 <!-- ROW 1: Controls -->
                 <div class="fb-topbar">
-                    <div class="fb-topbar-controls" style="width: 100%; display: flex; justify-content: flex-end;">
-                        <select id="tuning-select" class="styled-input pointer fb-select"></select>
+                    <div class="fb-topbar-controls" style="width: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <select id="tuning-select" class="styled-input pointer fb-select"></select>
+                            <input type="text" id="custom-tuning-input" placeholder="E2-A2-D3-G3-B3-E4" class="styled-input fb-select" style="width: 120px; font-size: 0.7rem; display: none;">
+                            <button id="toggle-custom-tuning" class="secondary-btn small-btn" style="min-width: 30px; padding: 4px;" title="Custom Tuning">✎</button>
+                        </div>
                         <label class="checkbox-label compact">
                             <input type="checkbox" id="display-intervals-toggle"> Intervals
                         </label>
@@ -195,6 +212,10 @@
                         <span class="fb-btn-label">Bengali Patterns</span>
                         <div id="pattern-buttons" class="button-grid"></div>
                     </div>
+                    <div class="fb-btn-group">
+                        <span class="fb-btn-label">CAGED / TNPS Boxes</span>
+                        <div id="fb-position-filters" class="button-grid"></div>
+                    </div>
                 </div>
 
                 <!-- ROW 5: Tape + History -->
@@ -204,6 +225,7 @@
                             <span class="fb-btn-label" style="margin:0;">Transcript</span>
                             <div style="display: flex; gap: 4px;">
                                 <button id="play-tape-btn" class="primary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">▶ Play</button>
+                                <button id="export-tape-btn" class="secondary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">💾 Export</button>
                                 <button id="clear-tape-btn" class="secondary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">🗑 Clear</button>
                             </div>
                         </div>
@@ -236,9 +258,18 @@
                             <label for="cof-scale-select">Practice Scale:</label>
                             <select id="cof-scale-select" class="styled-input pointer"></select>
                         </div>
-                        <p id="cof-key-sig">--</p>
+                        <p id="cof-scale-notes" style="font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; color: var(--text-main); letter-spacing: 2px; margin: 10px 0 5px 0;">--</p>
+                        <p id="cof-key-sig" style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">--</p>
                         <p id="cof-relative-minor">--</p>
-                        <p id="cof-diatonic-chords">--</p>
+                        <div style="margin-bottom: 12px;">
+                            <span class="fb-btn-label">Diatonic Triads</span>
+                            <div id="cof-diatonic-chords" class="button-grid" style="margin-top: 4px;"></div>
+                        </div>
+
+                        <div id="cof-positions-section" style="margin-bottom: 20px;">
+                            <span class="fb-btn-label">Interactive Scale Boxes (CAGED / TNPS)</span>
+                            <div id="cof-position-filters" class="button-grid" style="margin-top: 4px;"></div>
+                        </div>
                         <div class="cof-actions">
                             <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;">
                                 <input type="checkbox" id="cof-intervals-toggle"> Show functional intervals instead of note names
@@ -249,11 +280,16 @@
                             <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 12px;">
                                 <input type="checkbox" id="cof-quiz-mode"> Enable Ear Training Mode
                             </label>
-                            <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence Here</button>
+                            <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence</button>
+                            <button id="cof-extract-penta" class="secondary-btn small-btn" style="margin-top:4px; width:100%; border:1px solid var(--primary); color:var(--primary)" disabled>Extract Pentatonic Scale</button>
                         </div>
                         
                         <div id="quiz-module" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; text-align: center; backdrop-filter: blur(10px);">
-                            <h4 style="color: var(--primary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Ear Training Quiz</h4>
+                            <h4 style="color: var(--primary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Practice Quiz</h4>
+                            <select id="quiz-type" class="styled-input" style="width: 100%; margin-bottom: 10px; font-size: 0.75rem;">
+                                <option value="ear">Mystery Note (Ear Training)</option>
+                                <option value="degree">Scale Degrees (Theory Blitz)</option>
+                            </select>
                             <div id="quiz-prompt" style="font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; color: #fff;">Ready?</div>
                             <div id="quiz-status" style="font-size: 0.85rem; color: var(--text-muted); min-height: 20px;">Select a key, then press start.</div>
                             <button id="quiz-start-btn" class="primary-btn small-btn" style="margin-top: 10px; width: 120px;">Start Quiz</button>

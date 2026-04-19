@@ -4,7 +4,6 @@ export default class AppConfig {
     static MIN_SAMPLES = 0;
     static CORRELATION_THRESHOLD = 0.9;
     static NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    static DEFAULT_SARGAM_MAP = ["S", "S'", "R", "R'", "G", "M", "M'", "P", "P'", "D", "D'", "N"];
     static ALTERNATE_TUNINGS = [
         { name: "Standard", notes: ['E4', 'B3', 'G3', 'D3', 'A2', 'E2'] },
         { name: "Half-Step Down", notes: ['D#4', 'A#3', 'F#3', 'C#3', 'G#2', 'D#2'] },
@@ -12,11 +11,6 @@ export default class AppConfig {
         { name: "DADGAD", notes: ['D4', 'A3', 'G3', 'D3', 'A2', 'D2'] },
         { name: "Open G", notes: ['D4', 'B3', 'G3', 'D3', 'G2', 'D2'] }
     ];
-    static BENGALI_SARGAM_MAP = {
-        "সা": 0, "রে": 2, "গা": 4, "মা": 5, "পা": 7, "ধা": 9, "নি": 11,
-        "ঋ": 1, "জ্ঞ": 3, "হ্ম": 6, "দ": 8, "ণ": 10,
-        "S": 0, "S'": 1, "R": 2, "R'": 3, "G": 4, "M": 5, "M'": 6, "P": 7, "P'": 8, "D": 9, "D'": 10, "N": 11
-    };
     static SAMPLE_SEQUENCES = [
         { name: "Arohon (Ascending)", notes: ["সা", "রে", "গা", "মা", "পা", "ধা", "নি", "সা"] },
         { name: "Aborohon (Descending)", notes: ["সা", "নি", "ধা", "পা", "মা", "গা", "রে", "সা"] },
@@ -56,13 +50,13 @@ export default class AppConfig {
         { name: "Raag Yaman", arohan: [0, 2, 4, 6, 7, 9, 11, 12], aborohan: [12, 11, 9, 7, 6, 4, 2, 0] },
         { name: "Raag Durga", arohan: [0, 2, 5, 7, 9, 12], aborohan: [12, 9, 7, 5, 2, 0] },
         { name: "Raag Brindavani Sarang", arohan: [0, 2, 5, 7, 11, 12], aborohan: [12, 10, 7, 5, 2, 0] },
-        // Western Modes
-        { name: "Major (Ionian)", intervals: [0, 2, 4, 5, 7, 9, 11] },
-        { name: "Dorian", intervals: [0, 2, 3, 5, 7, 9, 10] },
-        { name: "Phrygian", intervals: [0, 1, 3, 5, 7, 8, 10] },
+        // Western Modes (Ordered by Brightness: Lydian -> Locrian)
         { name: "Lydian", intervals: [0, 2, 4, 6, 7, 9, 11] },
+        { name: "Major (Ionian)", intervals: [0, 2, 4, 5, 7, 9, 11] },
         { name: "Mixolydian", intervals: [0, 2, 4, 5, 7, 9, 10] },
+        { name: "Dorian", intervals: [0, 2, 3, 5, 7, 9, 10] },
         { name: "Aeolian (Minor)", intervals: [0, 2, 3, 5, 7, 8, 10] },
+        { name: "Phrygian", intervals: [0, 1, 3, 5, 7, 8, 10] },
         { name: "Locrian", intervals: [0, 1, 3, 5, 6, 8, 10] },
         { name: "Harmonic Minor", intervals: [0, 2, 3, 5, 7, 8, 11] },
         { name: "Melodic Minor", intervals: [0, 2, 3, 5, 7, 9, 11] },
@@ -92,4 +86,14 @@ export default class AppConfig {
         { name: "Dm", type: "min", pos: [{ s: 2, f: 2 }, { s: 1, f: 3 }, { s: 0, f: 1 }] },
         { name: "F", type: "maj", pos: [{ s: 3, f: 3 }, { s: 2, f: 2 }, { s: 1, f: 1 }, { s: 0, f: 1 }] }
     ];
+
+    static DEFAULT_SARGAM_MAP = {
+        0: 'S', 1: "S'", 2: 'R', 3: "R'", 4: 'G', 5: 'M', 6: "M'", 7: 'P', 8: "P'", 9: 'D', 10: "D'", 11: 'N'
+    };
+
+    static BENGALI_SARGAM_MAP = {
+        'সা': 0, 'রে': 2, 'গা': 4, 'মা': 5, 'পা': 7, 'ধা': 9, 'নি': 11,
+        'ঋ': 1, 'জ্ঞ': 3, 'হ্ম': 6, 'দ': 8, 'ণ': 10,
+        'S': 0, "S'": 1, 'R': 2, "R'": 3, 'G': 4, 'M': 5, "M'": 6, 'P': 7, "P'": 8, 'D': 9, "D'": 10, 'N': 11
+    };
 }

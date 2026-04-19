@@ -40,7 +40,13 @@ export default class UIManager {
         this.elements.needle.classList.remove('in-tune');
     }
 
-    render(freq) {
+    render(freq, confidence = 0) {
+        // Update Confidence Bar
+        if (this.elements.confidenceBar) {
+            this.elements.confidenceBar.style.width = `${confidence * 100}%`;
+            this.elements.confidenceBar.style.background = confidence > 0.8 ? 'var(--primary)' : (confidence > 0.5 ? '#f59e0b' : '#ef4444');
+        }
+
         if (freq <= 0 || freq >= 2000) return this.resetUI();
 
         const noteData = MusicEngine.freqToNote(freq);

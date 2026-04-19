@@ -615,25 +615,52 @@ input[type=range] { width: 100%; }
 
 .note-tape {
     display: flex;
-    gap: 4px;
-    background: rgba(0,0,0,0.15);
-    padding: 4px;
-    border-radius: 6px;
-    min-height: 28px;
+    gap: 6px;
+    background: repeating-linear-gradient(90deg, #111 0px, #111 40px, #1a1a1a 41px);
+    padding: 6px 12px;
+    border-radius: 8px;
+    min-height: 42px;
     overflow-x: auto;
     align-items: center;
+    border: 1px inset rgba(255,255,255,0.05);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
 }
 
 .tape-node {
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 4px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    color: var(--text-muted);
-    font-weight: bold;
-    font-size: 0.7rem;
+    background: linear-gradient(135deg, #3a2a1b 0%, #1a1510 100%);
+    border: 1px solid rgba(255,215,0,0.3);
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 0.8rem;
     white-space: nowrap;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    cursor: default;
+}
+
+.tape-node:hover {
+    transform: scale(1.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+@keyframes pulse-red {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; text-shadow: 0 0 10px #ff0000; }
+    100% { opacity: 0.4; }
+}
+
+.recording-badge {
+    color: #ff4444;
+    font-size: 0.65rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    animation: pulse-red 1.5s infinite;
 }
 
 /* Button Grid */
@@ -664,7 +691,7 @@ input[type=range] { width: 100%; }
 .fb-string { stroke: #888; stroke-width: 2; transition: stroke 0.3s, filter 0.3s; }
 .fb-fret { stroke: #555; stroke-width: 3; }
 .fb-nut { stroke: #ddd; stroke-width: 6; }
-.fb-inlay { fill: #333; opacity: 0.5; }
+.fb-inlay { fill: rgba(255, 255, 255, 0.15); }
 
 .fb-note-indicator {
     cursor: pointer;
@@ -707,10 +734,11 @@ input[type=range] { width: 100%; }
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 30px;
-    padding: 20px;
+    gap: 15px;
+    padding: 10px 20px;
     width: 100%;
     height: 100%;
+    overflow: hidden;
 }
 
 .circle-container {
@@ -748,9 +776,9 @@ input[type=range] { width: 100%; }
 
 .cof-text {
     font-family: 'Outfit', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    fill: var(--text-color);
+    font-size: 15px;
+    font-weight: 800;
+    fill: #ccc;
     text-anchor: middle;
     dominant-baseline: middle;
     pointer-events: none;
@@ -758,15 +786,14 @@ input[type=range] { width: 100%; }
 }
 
 .cof-min-text {
-    font-size: 14px;
-    font-weight: 400;
-    fill: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    fill: #999;
 }
 
 .cof-text.active {
-    fill: #ffffff;
-    font-weight: 800;
-    text-shadow: 0 0 8px var(--primary);
+    fill: #ffffff !important;
+    text-shadow: 0 0 10px var(--primary);
 }
 
 .cof-center-text {
@@ -956,3 +983,116 @@ input[type=range] { width: 100%; }
         overflow-y: auto;
     }
 }
+
+/* Grid System for Chord/Scale Buttons */
+.button-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.sample-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 5px !important;
+    line-height: 1.2 !important;
+    height: auto !important;
+    min-height: 55px;
+    text-align: center;
+}
+
+.sample-btn strong {
+    font-size: 0.9rem;
+    display: block;
+}
+
+.sample-btn span {
+    display: block;
+    margin-top: 4px;
+}
+
+
+/* Circle Highlight System */
+.cof-segment {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.cof-segment.inactive-shroud {
+    opacity: 0.15;
+    filter: grayscale(1);
+}
+
+.cof-segment.active {
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+.cof-text {
+    pointer-events: none;
+    transition: all 0.3s ease;
+    fill: #ddd;
+}
+
+.cof-text.active {
+    fill: #fff !important;
+    font-weight: 900 !important;
+    text-shadow: 0 0 8px #fff;
+}
+
+
+/* Muted.io Style Pills */
+.note-pill-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-main);
+    border-radius: 20px;
+    padding: 2px 12px;
+    font-size: 0.9rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 2px;
+}
+
+.note-pill-btn:hover {
+    background: var(--primary);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.active-box {
+    box-shadow: 0 0 15px var(--primary-glow);
+    border-color: var(--primary) !important;
+}
+
+
+ / *   S c r e e n   N a v i g a t i o n   S y s t e m   * / 
+ . s c r e e n   { 
+         d i s p l a y :   n o n e ; 
+         a n i m a t i o n :   f a d e I n   0 . 4 s   e a s e ; 
+ } 
+ 
+ . s c r e e n . a c t i v e   { 
+         d i s p l a y :   b l o c k ; 
+ } 
+ 
+ @ k e y f r a m e s   f a d e I n   { 
+         f r o m   {   o p a c i t y :   0 ;   t r a n s f o r m :   t r a n s l a t e Y ( 1 0 p x ) ;   } 
+         t o   {   o p a c i t y :   1 ;   t r a n s f o r m :   t r a n s l a t e Y ( 0 ) ;   } 
+ } 
+ 
+ / *   G l a s s   M u l t i - S c r e e n   S u p p o r t   * / 
+ . c i r c l e - p a g e ,   . f b - p a g e   { 
+         d i s p l a y :   f l e x ; 
+         f l e x - d i r e c t i o n :   c o l u m n ; 
+         h e i g h t :   1 0 0 % ; 
+         g a p :   2 0 p x ; 
+         p a d d i n g - b o t t o m :   3 0 p x ; 
+ } 
+  
+ 

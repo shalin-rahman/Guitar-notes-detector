@@ -1,6 +1,9 @@
 import AppConfig from './AppConfig.js';
 import MusicEngine from './MusicEngine.js';
 import PitchDetector from './PitchDetector.js';
+import TrackingManager from './TrackingManager.js';
+import UIManager from './UIManager.js';
+import FileManager from './FileManager.js';
 import AudioPlayer from './AudioPlayer.js';
 import FretboardManager from './FretboardManager.js';
 import CircleManager from './CircleManager.js';
@@ -57,12 +60,22 @@ class App {
             // Metronome
             metroToggle: document.getElementById('metronome-toggle'),
             metroBpm: document.getElementById('metronome-bpm'),
+            metroSound: document.getElementById('metronome-sound'),
+            metroSignature: document.getElementById('metronome-signature'),
             metroLight: document.getElementById('metronome-light'),
+            
+            // Visualizer Extras
+            confidenceBar: document.getElementById('confidence-bar'),
             
             // Transcription
             liveCaptureBtn: document.getElementById('live-capture-btn'),
             playTapeBtn: document.getElementById('play-tape-btn'),
-            clearTapeBtn: document.getElementById('clear-tape-btn')
+            exportTapeBtn: document.getElementById('export-tape-btn'),
+            clearTapeBtn: document.getElementById('clear-tape-btn'),
+            
+            // Custom Tuning
+            customTuningInput: document.getElementById('custom-tuning-input'),
+            toggleCustomTuningBtn: document.getElementById('toggle-custom-tuning')
         };
 
         this.tapeBuffer = [];
@@ -155,13 +168,11 @@ class App {
             }
         });
 
-        this.elements.metroBpm.addEventListener('change', (e) => {
-            this.metronome.setBpm(parseInt(e.target.value));
-        });
-        
-        this.elements.metroBpm.addEventListener('input', (e) => {
-            this.metronome.setBpm(parseInt(e.target.value));
-        });
+        const updateBpm = (e) => this.metronome.setBpm(parseInt(e.target.value));
+        this.elements.metroBpm.addEventListener('change', updateBpm);
+        this.elements.metroBpm.addEventListener('input', updateBpm);
+        this.elements.metroSound.addEventListener('change', (e) => this.metronome.soundType = e.target.value);
+        this.elements.metroSignature.addEventListener('change', (e) => this.metronome.beatsPerMeasure = parseInt(e.target.value));
 
         // Transcription Controls
         this.elements.liveCaptureBtn.addEventListener('click', () => {
@@ -176,10 +187,108 @@ class App {
             }
         });
 
+        this.elements.exportTapeBtn.addEventListener('click', () => this.exportTape());
+
         this.elements.clearTapeBtn.addEventListener('click', () => {
             this.tapeBuffer = [];
             this.updateTape(-1);
         });
+
+        // Custom Tuning Toggle
+        this.elements.toggleCustomTuningBtn.addEventListener('click', () => {
+            const isHidden = this.elements.customTuningInput.style.display === 'none';
+            this.elements.customTuningInput.style.display = isHidden ? 'block' : 'none';
+            this.elements.tuningSelect.style.display = isHidden ? 'none' : 'block';
+            this.elements.toggleCustomTuningBtn.textContent = isHidden ? '✖' : '✎';
+        });
+
+        this.elements.customTuningInput.addEventListener('change', (e) => {
+            const val = e.target.value.trim().toUpperCase();
+            if (val) {
+                const notes = val.split('-').map(n => n.trim());
+                if (notes.length === 6) {
+                    this.fretboard.setTuning(notes);
+                    this.elements.positionInfo.textContent = `Custom Tuning Set: ${notes.join('-')}`;
+                }
+            }
+        });
+
+        // 6. Local File Analysis (Drag & Drop)
+        const dropZone = document.getElementById('drop-zone');
+        if (dropZone) {
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('hover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('hover');
+                const file = e.dataTransfer.files[0];
+                if (file) this.analyzeLocalFile(file);
+            });
+            dropZone.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'audio/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) this.analyzeLocalFile(file);
+                };
+                input.click();
+            });
+        }
+    }
+
+    async analyzeLocalFile(file) {
+        this.elements.micStatus.textContent = "Analyzing File...";
+        this.elements.micStatus.classList.add('active');
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result;
+                const audioData = await this.audioContext.decodeAudioData(arrayBuffer);
+                const rawData = audioData.getChannelData(0);
+                const sampleRate = audioData.sampleRate;
+                
+                this.tapeBuffer = ["FILE START"];
+                const chunkSize = 4096;
+                let lastNote = "";
+                for (let i = 0; i < rawData.length; i += chunkSize) {
+                    const chunk = rawData.slice(i, i + chunkSize);
+                    const freq = PitchDetector.autoCorrelate(chunk, sampleRate, 85);
+                    const note = MusicEngine.freqToNote(freq);
+                    if (note) {
+                        const nameOnly = note.name.replace(/[0-9]/g, '');
+                        if (nameOnly !== lastNote) {
+                            this.tapeBuffer.push(nameOnly);
+                            lastNote = nameOnly;
+                            if (this.tapeBuffer.length > 50) break;
+                        }
+                    }
+                }
+                this.tapeBuffer.push("END");
+                this.updateTape();
+                this.elements.micStatus.textContent = "Analysis Complete";
+            } catch (err) {
+                console.error("File Analysis Failed:", err);
+                this.elements.micStatus.textContent = "Analysis Failed";
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    exportTape() {
+        if (this.tapeBuffer.length === 0) return;
+        const content = "Ahordian Transcription Tape\n" + 
+                        "===========================\n" + 
+                        "Generated: " + new Date().toLocaleString() + "\n\n" + 
+                        "Sequence: " + this.tapeBuffer.join(" - ") + "\n";
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ahordian_transcription_${Date.now()}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     loadTranscriptionToTape(notes) {
@@ -200,7 +309,7 @@ class App {
         }
     }
 
-    triggerFretboardNote(noteInput) {
+    triggerFretboardNote(noteInput, duration = 800) {
         this.initAudioContext();
         let targetNote = noteInput.toUpperCase().trim();
 
@@ -212,7 +321,7 @@ class App {
 
         if (!targetNote) return;
 
-        const pos = this.fretboard.showNote(targetNote);
+        const pos = this.fretboard.showNote(targetNote, duration);
         if (pos) {
             if (this.elements.positionInfo) {
                 this.elements.positionInfo.textContent = `${targetNote} → String ${pos.string + 1}, Fret ${pos.fret}`;
@@ -355,7 +464,7 @@ class App {
             const subNotes = noteGroup.includes('-') ? noteGroup.split('-') : [noteGroup];
             for (const note of subNotes) {
                 if (this.sequenceAbortFlag || this._currentSeqId !== seqId) return;
-                this.triggerFretboardNote(note);
+                this.triggerFretboardNote(note, tempo);
                 if (subNotes.length > 1) await new Promise(r => setTimeout(r, tempo / 2));
             }
             await new Promise(r => setTimeout(r, tempo));
@@ -396,7 +505,7 @@ class App {
                 const sensitivityVal = parseInt(this.elements.sensitivity.value || 80);
                 const freq = PitchDetector.autoCorrelate(dataArray, this.audioContext.sampleRate, sensitivityVal);
 
-                this.ui.render(freq);
+                this.ui.render(freq, PitchDetector.lastCorrelation);
 
                 const noteData = MusicEngine.freqToNote(freq);
                 if (noteData && Math.abs(noteData.cents) < 15) {
@@ -416,7 +525,7 @@ class App {
                         if (this.captureBuffer.length > 8) { // Buffer for 8 frames (~130ms) to ensure stability
                             const mostFrequent = this.getMostFrequent(this.captureBuffer);
                             if (mostFrequent && mostFrequent !== this.lastCapturedNote) {
-                                this.lastCapturedNote = mostFrequent;
+                this.lastCapturedNote = mostFrequent;
                                 // Add ONLY the note name (without octave) to the tape for cleaner look
                                 const noteOnly = mostFrequent.replace(/[0-9]/g, '');
                                 this.tapeBuffer.push(noteOnly);
@@ -468,6 +577,13 @@ class App {
         this.elements.startBtn.disabled = false;
         this.elements.stopBtn.disabled = true;
         this.ui.resetUI();
+    }
+
+    getMostFrequent(arr) {
+        if (!arr || arr.length === 0) return null;
+        const counts = {};
+        arr.forEach(x => counts[x] = (counts[x] || 0) + 1);
+        return Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
     }
 }
 

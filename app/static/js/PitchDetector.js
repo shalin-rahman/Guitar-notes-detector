@@ -1,6 +1,7 @@
 import AppConfig from './AppConfig.js';
 
 export default class PitchDetector {
+    static lastCorrelation = 0;
     static autoCorrelate(buf, sampleRate, sensitivityParam = 80) {
         let SIZE = buf.length;
         let rms = 0;
@@ -33,9 +34,9 @@ export default class PitchDetector {
         while (startLag < correlations.length && correlations[startLag] >= 0) startLag++;
         while (startLag < correlations.length && correlations[startLag] <= 0) startLag++;
 
-        let MIN_SAMPLES = Math.floor(sampleRate / 1000); // Max Frequency overhead (1kHz)
+        let MIN_SAMPLES = Math.floor(sampleRate / 2000); // 2kHz limit
         if (startLag < MIN_SAMPLES) startLag = MIN_SAMPLES;
-        let MAX_SAMPLES = Math.floor(sampleRate / 60);   // Min Frequency (60Hz)
+        let MAX_SAMPLES = Math.floor(sampleRate / 40);   // 40Hz limit
 
         let best_offset = -1;
         let best_correlation = 0;
@@ -59,6 +60,7 @@ export default class PitchDetector {
         }
         
         // 5. Parabolic Interpolation for Sub-sample Accuracy (Massively reduces latency jitter)
+        this.lastCorrelation = best_correlation;
         if (best_correlation > 0.5 && best_offset > -1) {
             let y1 = correlations[best_offset - 1];
             let y2 = correlations[best_offset];
