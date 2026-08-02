@@ -8,6 +8,12 @@ export default class FretboardManager {
         this.persistentNotes = [];
         this.displayMode = 'notes'; // 'notes' or 'intervals'
         this.showNoteNames = true;
+        this.handedness = 'right';
+        this.render();
+    }
+
+    setHandedness(mode) {
+        this.handedness = mode;
         this.render();
     }
 
@@ -55,19 +61,22 @@ export default class FretboardManager {
 
         // Fret numbers along the top and bottom for clarity
         for (let i = 1; i <= this.numFrets; i++) {
-            const x = leftMargin + (i - 0.5) * fretWidth;
+            const logicalX = leftMargin + (i - 0.5) * fretWidth;
+            const x = this.handedness === 'left' ? width - logicalX : logicalX;
             svg += `<text x="${x}" y="${topMargin - 6}" fill="#999" font-size="10" font-weight="bold" text-anchor="middle" font-family="Outfit, sans-serif">${i}</text>`;
             svg += `<text x="${x}" y="${height - bottomMargin + 12}" fill="#999" font-size="10" font-weight="bold" text-anchor="middle" font-family="Outfit, sans-serif">${i}</text>`;
         }
 
         // Frets and inlay dots
         for (let i = 0; i <= this.numFrets; i++) {
-            const x = leftMargin + i * fretWidth;
+            const logicalX = leftMargin + i * fretWidth;
+            const x = this.handedness === 'left' ? width - logicalX : logicalX;
             const className = i === 0 ? 'fb-nut' : 'fb-fret';
             svg += `<line x1="${x}" y1="${topMargin}" x2="${x}" y2="${topMargin + stringAreaHeight}" class="${className}" />`;
 
             if ([3, 5, 7, 9, 12, 15].includes(i)) {
-                const dotX = leftMargin + (i - 0.5) * fretWidth;
+                const logicalDotX = leftMargin + (i - 0.5) * fretWidth;
+                const dotX = this.handedness === 'left' ? width - logicalDotX : logicalDotX;
                 if (i === 12) {
                     svg += `<circle cx="${dotX}" cy="${topMargin + stringGap * 1.5}" r="3.5" class="fb-inlay" />`;
                     svg += `<circle cx="${dotX}" cy="${topMargin + stringGap * 3.5}" r="3.5" class="fb-inlay" />`;
@@ -87,7 +96,10 @@ export default class FretboardManager {
             const openNote = this.getNoteAt(i, 0);
             if (openNote) {
                 const label = openNote.replace(/[0-9]/g, '');
-                svg += `<text x="${leftMargin - 8}" y="${y + 1}" fill="#ffd700" font-size="9" font-weight="bold" text-anchor="end" dominant-baseline="central" font-family="Outfit, sans-serif">${label}</text>`;
+                // Position labels on the left or right depending on handedness
+                const labelX = this.handedness === 'left' ? width - rightMargin + 8 : leftMargin - 8;
+                const textAnchor = this.handedness === 'left' ? 'start' : 'end';
+                svg += `<text x="${labelX}" y="${y + 1}" fill="#ffd700" font-size="9" font-weight="bold" text-anchor="${textAnchor}" dominant-baseline="central" font-family="Outfit, sans-serif">${label}</text>`;
             }
         }
 
@@ -99,7 +111,8 @@ export default class FretboardManager {
                     if (!note) continue;
                     const label = note.replace(/[0-9]/g, '');
                     const isSharp = label.includes('#');
-                    const x = leftMargin + (f - 0.5) * fretWidth;
+                    const logicalX = leftMargin + (f - 0.5) * fretWidth;
+                    const x = this.handedness === 'left' ? width - logicalX : logicalX;
                     const y = topMargin + s * stringGap;
                     svg += `<text x="${x}" y="${y + 1}" fill="${isSharp ? 'rgba(150,150,150,0.5)' : 'rgba(255,215,0,0.4)'}" font-size="${isSharp ? '8' : '9'}" font-weight="${isSharp ? '400' : '600'}" text-anchor="middle" dominant-baseline="central" font-family="Outfit, sans-serif">${label}</text>`;
                 }
@@ -244,7 +257,8 @@ export default class FretboardManager {
         const stringAreaHeight = height - topMargin - bottomMargin;
         const stringGap = stringAreaHeight / (this.strings.length - 1);
 
-        const x = pos.fret === 0 ? leftMargin - 2 : leftMargin + (pos.fret - 0.5) * fretWidth;
+        const logicalX = pos.fret === 0 ? leftMargin - 2 : leftMargin + (pos.fret - 0.5) * fretWidth;
+        const x = this.handedness === 'left' ? width - logicalX : logicalX;
         const y = topMargin + pos.string * stringGap;
         const label = noteName.replace(/[0-9]/g, '');
 

@@ -89,4 +89,21 @@ export default class MusicEngine {
             return AppConfig.NOTE_NAMES[noteIdx];
         });
     }
+
+    static getCapoChord(targetChord, capoFret) {
+        if (!targetChord || isNaN(capoFret)) return "Invalid Input";
+        
+        let root = targetChord.replace(/m|maj7|7|sus4|sus2|dim|aug/g, "").trim();
+        let suffix = targetChord.substring(root.length).trim();
+        
+        // Handle flats to sharps mapping just in case
+        const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Fb': 'E', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#', 'Cb': 'B' };
+        if (flatMap[root]) root = flatMap[root];
+        
+        const rootIdx = AppConfig.NOTE_NAMES.indexOf(root);
+        if (rootIdx === -1) return "Unknown Chord";
+        
+        const newIdx = (rootIdx - capoFret + 24) % 12; // +24 to avoid negative numbers safely
+        return AppConfig.NOTE_NAMES[newIdx] + suffix;
+    }
 }

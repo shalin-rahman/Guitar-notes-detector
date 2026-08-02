@@ -2,12 +2,12 @@ import AppConfig from './AppConfig.js';
 import MusicEngine from './MusicEngine.js';
 import PitchDetector from './PitchDetector.js';
 import TrackingManager from './TrackingManager.js';
-import UIManager from './UIManager.js';
-import FileManager from './FileManager.js';
-import AudioPlayer from './AudioPlayer.js';
 import FretboardManager from './FretboardManager.js';
 import CircleManager from './CircleManager.js';
 import Metronome from './Metronome.js';
+import StorageManager from './StorageManager.js';
+import BackingTrackEngine from './BackingTrackEngine.js';
+import StorageManager from './StorageManager.js';
 
 class App {
     constructor() {
@@ -82,7 +82,26 @@ class App {
             
             // Custom Tuning
             customTuningInput: document.getElementById('custom-tuning-input'),
-            toggleCustomTuningBtn: document.getElementById('toggle-custom-tuning')
+            toggleCustomTuningBtn: document.getElementById('toggle-custom-tuning'),
+            
+            // Settings
+            settingTheme: document.getElementById('setting-theme'),
+            settingHandedness: document.getElementById('setting-handedness'),
+            settingTuning: document.getElementById('setting-tuning'),
+            saveSettingsBtn: document.getElementById('save-settings-btn'),
+            
+            // Dashboard
+            recentItemsList: document.getElementById('recent-items-list'),
+            generateChallengeBtn: document.getElementById('generate-challenge-btn'),
+            dailyChallengeText: document.getElementById('daily-challenge-text'),
+            
+            // Jam Station
+            jamPlayBtn: document.getElementById('jam-play-btn'),
+            jamStopBtn: document.getElementById('jam-stop-btn'),
+            jamProgression: document.getElementById('jam-progression'),
+            jamKey: document.getElementById('jam-key'),
+            jamSoloMode: document.getElementById('jam-solo-mode'),
+            liveChordIndicator: document.getElementById('live-chord-indicator')
         };
 
         this.tapeBuffer = [];
@@ -95,11 +114,14 @@ class App {
         this.fretboard = new FretboardManager('guitar-fretboard');
         this.circleManager = new CircleManager('circle-container', this);
         this.player = null;
+        this.backingEngine = null;
 
         this.bindEvents();
         this.loadFretboardHistory();
         this.loadSamples();
         this.populateTunings();
+        this.applySettings();
+        this.updateDashboard();
         FileManager.init(this.elements.dropZone, this.elements.fileInput, this.tracker);
     }
 
@@ -136,11 +158,80 @@ class App {
             btn.addEventListener('click', () => {
                 const target = btn.getAttribute('data-target');
                 this.elements.screens.forEach(s => s.classList.remove('active'));
-                document.getElementById(target).classList.add('active');
+                const targetScreen = document.getElementById(target);
+                if(targetScreen) targetScreen.classList.add('active');
+                
                 this.elements.navBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                
+                if (target === 'home-screen') this.updateDashboard();
             });
         });
+
+        if (this.elements.saveSettingsBtn) {
+            this.elements.saveSettingsBtn.addEventListener('click', () => {
+                StorageManager.saveSettings({
+                    theme: this.elements.settingTheme.value,
+                    handedness: this.elements.settingHandedness.value,
+                    defaultTuning: this.elements.settingTuning.value
+                });
+                this.applySettings();
+                
+                // Show brief confirmation
+                const originalText = this.elements.saveSettingsBtn.textContent;
+                this.elements.saveSettingsBtn.textContent = 'Saved!';
+                setTimeout(() => this.elements.saveSettingsBtn.textContent = originalText, 1500);
+            });
+        }
+        
+        if (this.elements.generateChallengeBtn) {
+            this.elements.generateChallengeBtn.addEventListener('click', () => this.generateChallenge());
+        }
+
+        // Capo Calculator
+        const capoCalcBtn = document.getElementById('capo-calc-btn');
+        if (capoCalcBtn) {
+            capoCalcBtn.addEventListener('click', () => {
+                const orig = document.getElementById('capo-original').value;
+                const fret = parseInt(document.getElementById('capo-fret').value);
+                const result = MusicEngine.getCapoChord(orig, fret);
+                document.getElementById('capo-result').textContent = result;
+            });
+        }
+
+        // Jam Station Controls
+        if (this.elements.jamPlayBtn) {
+            this.elements.jamPlayBtn.addEventListener('click', () => {
+                this.initAudioContext();
+                if (!this.backingEngine) {
+                    this.backingEngine = new BackingTrackEngine(this.player, this.fretboard, this.onJamChordChange.bind(this));
+                }
+                // Ensure player is linked if created late
+                this.backingEngine.player = this.player;
+                
+                const progId = this.elements.jamProgression.value;
+                const key = this.elements.jamKey.value;
+                
+                this.backingEngine.setBpm(this.metronome.bpm || 120);
+                this.backingEngine.setProgression(progId, key);
+                this.backingEngine.start();
+                
+                this.elements.jamPlayBtn.disabled = true;
+                this.elements.jamStopBtn.disabled = false;
+                this.elements.liveChordIndicator.style.display = 'block';
+            });
+        }
+        
+        if (this.elements.jamStopBtn) {
+            this.elements.jamStopBtn.addEventListener('click', () => {
+                if (this.backingEngine) this.backingEngine.stop();
+                this.elements.jamPlayBtn.disabled = false;
+                this.elements.jamStopBtn.disabled = true;
+                this.elements.liveChordIndicator.style.display = 'none';
+                this.elements.liveChordIndicator.textContent = '--';
+                this.fretboard.clearOverlay();
+            });
+        }
 
         this.elements.playNoteBtn.addEventListener('click', () => {
             const note = this.elements.manualNoteInput.value.trim();
@@ -241,6 +332,82 @@ class App {
                 };
                 input.click();
             });
+        }
+    }
+
+    applySettings() {
+        const settings = StorageManager.loadSettings();
+        
+        // Apply Theme
+        if (settings.theme === 'light') {
+            document.body.classList.remove('dark-mode');
+            document.body.classList.add('light-mode');
+        } else {
+            document.body.classList.remove('light-mode');
+            document.body.classList.add('dark-mode');
+        }
+        
+        // Sync Settings UI
+        if (this.elements.settingTheme) this.elements.settingTheme.value = settings.theme;
+        if (this.elements.settingHandedness) this.elements.settingHandedness.value = settings.handedness;
+        if (this.elements.settingTuning) this.elements.settingTuning.value = settings.defaultTuning;
+        
+        // Pass handedness to fretboard if method exists
+        if (this.fretboard && typeof this.fretboard.setHandedness === 'function') {
+            this.fretboard.setHandedness(settings.handedness);
+        }
+    }
+
+    updateDashboard() {
+        if (!this.elements.recentItemsList) return;
+        const recent = StorageManager.getRecentItems();
+        if (recent.length === 0) {
+            this.elements.recentItemsList.innerHTML = '<li class="empty-state">No recent items found.</li>';
+        } else {
+            this.elements.recentItemsList.innerHTML = recent.map(item => `
+                <li class="recent-item">
+                    <span style="color:var(--primary)">${item.type}</span>: ${item.name}
+                </li>
+            `).join('');
+        }
+        
+        if (this.elements.dailyChallengeText && this.elements.dailyChallengeText.textContent === 'Loading...') {
+            this.generateChallenge();
+        }
+    }
+    
+    generateChallenge() {
+        if (!this.elements.dailyChallengeText) return;
+        const keys = ['C', 'G', 'D', 'A', 'E'];
+        const scales = ['Major Pentatonic', 'Minor Pentatonic', 'Blues'];
+        const modes = ['Alternate Picking', 'Legato', 'Swing Feel'];
+        
+        const key = keys[Math.floor(Math.random() * keys.length)];
+        const scale = scales[Math.floor(Math.random() * scales.length)];
+        const mode = modes[Math.floor(Math.random() * modes.length)];
+        const bpm = Math.floor(Math.random() * 40) + 80;
+        
+        this.elements.dailyChallengeText.innerHTML = `Play the <strong>${key} ${scale}</strong> using <strong>${mode}</strong> at ${bpm} BPM.`;
+    }
+
+    onJamChordChange(chordData, numeral) {
+        if (this.elements.liveChordIndicator) {
+            this.elements.liveChordIndicator.textContent = `${chordData.name} (${numeral})`;
+        }
+        
+        const soloMode = this.elements.jamSoloMode.value;
+        if (soloMode === 'none') {
+            this.fretboard.clearOverlay();
+            return;
+        }
+        
+        const scaleNotes = MusicEngine.getScaleForChord(chordData.root, chordData.type, soloMode);
+        
+        if (scaleNotes && scaleNotes.length > 0) {
+            // Show scale bounded to frets 0-5 to start, can be dynamic later
+            this.fretboard.showScale(scaleNotes, {min: 0, max: 12});
+        } else {
+            this.fretboard.clearOverlay();
         }
     }
 
@@ -371,9 +538,11 @@ class App {
     }
 
     populateTunings() {
-        this.elements.tuningSelect.innerHTML = AppConfig.ALTERNATE_TUNINGS.map(t => `
+        const options = AppConfig.ALTERNATE_TUNINGS.map(t => `
             <option value="${t.name}">${t.name}</option>
         `).join('');
+        if (this.elements.tuningSelect) this.elements.tuningSelect.innerHTML = options;
+        if (this.elements.settingTuning) this.elements.settingTuning.innerHTML = options;
     }
 
     triggerScale(scaleName, customRoot = null) {

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ahordian — Guitar Note Detector & Fretboard Assistant</title>
+    <title>Ahordian — Ultimate Guitar Suite</title>
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/logo.png">
     <link rel="apple-touch-icon" href="/static/logo.png">
@@ -12,355 +12,360 @@
 </head>
 
 <body class="dark-mode">
-    <div class="glass-container">
-        <header>
-            <div class="logo" style="display: flex; align-items: center; gap: 15px;">
-                <img src="/static/logo.png" alt="Ahordian Acoustic Logo"
-                    style="height: 40px; mix-blend-mode: screen; filter: drop-shadow(0px 0px 8px rgba(192,192,192,0.4));">
+    <div class="app-layout">
+        <!-- SIDEBAR NAVIGATION -->
+        <aside class="sidebar">
+            <div class="logo">
+                <img src="/static/logo.png" alt="Ahordian Acoustic Logo">
                 <h1>Ahordian</h1>
             </div>
-            <nav class="main-nav">
-                <button class="nav-btn active" data-target="detector-screen">Detector</button>
-                <button class="nav-btn" data-target="fretboard-screen">Fretboard</button>
-                <button class="nav-btn" data-target="circle-screen">Circle of 5ths</button>
+            
+            <nav class="sidebar-nav">
+                <span class="nav-section-title">Dashboard</span>
+                <button class="nav-btn active" data-target="home-screen">🏠 Home</button>
+                
+                <span class="nav-section-title">Core Tools</span>
+                <button class="nav-btn" data-target="detector-screen">🎙️ Tuner & Detector</button>
+                <button class="nav-btn" data-target="tools-screen">🧰 Guitar Tools Hub</button>
+                
+                <span class="nav-section-title">Explorers</span>
+                <button class="nav-btn" data-target="fretboard-screen">🎸 Interactive Fretboard</button>
+                <button class="nav-btn" data-target="circle-screen">🎡 Circle of Fifths</button>
+                
             </nav>
 
-            <div class="metronome-control" style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--glass-border);">
-                <div id="metronome-light" style="width: 12px; height: 12px; border-radius: 50%; background: #333; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: all 0.1s ease;"></div>
-                <input type="number" id="metronome-bpm" value="120" min="40" max="250" style="width: 50px; background: transparent; border: none; color: var(--primary); font-weight: 800; font-family: 'Outfit'; font-size: 1rem; text-align: center; outline: none;">
-                <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; margin-right: 5px;">BPM</span>
-                <select id="metronome-sound" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; font-family: 'Outfit'; outline: none; cursor: pointer;">
-                    <option value="beep">Beep</option>
-                    <option value="woodblock">Wood</option>
-                    <option value="tick">Tick</option>
-                </select>
-                <select id="metronome-signature" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; font-family: 'Outfit'; outline: none; cursor: pointer;">
-                    <option value="4">4/4</option>
-                    <option value="3">3/4</option>
-                    <option value="6">6/8</option>
-                </select>
-                <button id="metronome-toggle" style="background: transparent; border: none; color: var(--text-main); cursor: pointer; font-size: 1.1rem; transition: 0.2s; margin-left: 5px;">⏵</button>
+            <div class="sidebar-footer">
+                <button class="nav-btn" data-target="settings-screen">⚙️ Settings</button>
             </div>
+        </aside>
 
-            <div class="status-badge" id="mic-status">Microphone Off</div>
-        </header>
-
-        <main class="main-layout screen active" id="detector-screen">
-
-            <!-- LEFT PANEL: Visualizer & History -->
-            <div class="left-panel">
-
-                <section class="visualizer-section">
-                    <canvas id="waveform" class="visualizer-canvas"></canvas>
-                    <div class="confidence-container" style="width: 80%; height: 3px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-top: -10px; margin-bottom: 20px; overflow: hidden;">
-                        <div id="confidence-bar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; box-shadow: 0 0 10px var(--primary-glow);"></div>
-                    </div>
-
-                    <div class="tuner-physics-module">
-                        <div class="gauge-background">
-                            <div class="tick flat"></div>
-                            <div class="tick perfect"></div>
-                            <div class="tick sharp"></div>
-                        </div>
-                        <div class="needle" id="needle"></div>
-                    </div>
-
-                    <div class="note-display-module">
-                        <div class="note-wrap">
-                            <span id="current-note" class="massive-note western-note">--</span>
-                            <span class="divider">|</span>
-                            <span id="current-sargam" class="massive-note sargam-note">-</span>
-                        </div>
-                        <span id="current-freq" class="metric-label">0.0 Hz</span>
-                        <div id="current-tab" class="tab-label"></div>
-
-                        <div class="live-chord-display">
-                            <span class="chord-label">Estimated Chord: </span>
-                            <span id="live-chord" class="chord-value">None</span>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="history-section">
-                    <div class="history-header">
-                        <h3>Live Stream & History</h3>
-                        <div class="history-actions">
-                            <button id="live-capture-btn" class="secondary-btn small-btn">🔴 Record to Tape: OFF</button>
-                            <button id="save-btn" class="secondary-btn small-btn">Save Log</button>
-                            <label for="file-input" class="secondary-btn small-btn file-label">Upload File</label>
-                            <input type="file" id="file-input" hidden accept="audio/*">
-                        </div>
-                    </div>
-
-                    <div class="last10-module">
-                        <h4>Fast Buffer (Last 10 Nodes)</h4>
-                        <div id="last10-list">
-                            <!-- Last 10 stable nodes -->
-                        </div>
-                    </div>
-
-                    <div class="scrolling-ticker-wrapper">
-                        <div class="scrolling-ticker" id="scrolling-ticker">
-                            <!-- Scrolling items appended here -->
-                        </div>
-                    </div>
-
-                    <div class="history-list-module" id="history-list">
-                        <div class="empty-state">No notes detected yet. Play something!</div>
-                    </div>
-                </section>
-
-            </div>
-
-            <!-- RIGHT PANEL: Controls -->
-            <section class="controls-panel">
-                <button id="start-btn" class="primary-btn">Start Detection</button>
-                <button id="stop-btn" class="secondary-btn" disabled>Stop</button>
-
-                <div class="settings-mini spacer-top">
-                    <label for="sensitivity">Mic Sensitivity (Software Noise Gate)</label>
-                    <input type="range" id="sensitivity" min="0" max="100" value="80">
-                </div>
-
-                <div class="settings-mini spacer-top">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="hw-noise-suppress" checked>
-                        Hardware Noise Suppression
-                    </label>
-                </div>
-
-                <div class="settings-mini spacer-top">
-                    <label for="sa-root">Sargam Root (Sa = S):</label>
-                    <select id="sa-root" class="styled-input pointer">
-                        <option value="C">C</option>
-                        <option value="C#">C#</option>
-                        <option value="D">D</option>
-                        <option value="D#">D#</option>
-                        <option value="E">E</option>
-                        <option value="F">F</option>
-                        <option value="F#">F#</option>
-                        <option value="G">G</option>
-                        <option value="G#">G#</option>
-                        <option value="A">A</option>
-                        <option value="A#">A#</option>
-                        <option value="B">B</option>
+        <!-- MAIN CONTENT AREA -->
+        <div class="main-content-area">
+            
+            <!-- GLOBAL TOPBAR -->
+            <header class="global-topbar">
+                <div class="metronome-control">
+                    <div id="metronome-light"></div>
+                    <input type="number" id="metronome-bpm" value="120" min="40" max="250">
+                    <span class="bpm-label">BPM</span>
+                    <select id="metronome-sound">
+                        <option value="beep">Beep</option>
+                        <option value="woodblock">Wood</option>
+                        <option value="tick">Tick</option>
                     </select>
+                    <select id="metronome-signature">
+                        <option value="4">4/4</option>
+                        <option value="3">3/4</option>
+                        <option value="6">6/8</option>
+                    </select>
+                    <button id="metronome-toggle">⏵</button>
                 </div>
+                
+                <div class="status-badge" id="mic-status">Microphone Off</div>
+            </header>
 
-                <div class="settings-mini spacer-top">
-                    <label for="sa-symbols">Sargam Notation Map:</label>
-                    <input type="text" id="sa-symbols" class="styled-input mono"
-                        value="S, S', R, R', G, M, M', P, P', D, D', N">
-                </div>
-
-                <div id="drop-zone" class="drop-zone-module">
-                    Drag & Drop Audio File to Analyze Server-Side
-                </div>
-
-                <div
-                    style="text-align: center; margin-top: 10px; padding-bottom: 5px; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8; letter-spacing: 0.5px;">
-                    Experimental Build | Developed by <span
-                        style="color: var(--primary); font-weight: 800;">Shalin</span>
-                </div>
-            </section>
-        </main>
-
-        <!-- AHIYAN'S FRETBOARD SCREEN -->
-        <main class="screen" id="fretboard-screen">
-            <div class="fb-page">
-                <!-- ROW 1: Controls -->
-                <div class="fb-topbar">
-                    <div class="fb-topbar-controls" style="width: 100%; display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-                        <div style="display: flex; gap: 4px; align-items: center;">
-                            <select id="tuning-select" class="styled-input pointer fb-select"></select>
-                            <input type="text" id="custom-tuning-input" placeholder="E2-A2-D3-G3-B3-E4" class="styled-input fb-select" style="width: 120px; font-size: 0.7rem; display: none;">
-                            <button id="toggle-custom-tuning" class="secondary-btn small-btn" style="min-width: 30px; padding: 4px;" title="Custom Tuning">✎</button>
-                        </div>
-                        <label class="checkbox-label compact">
-                            <input type="checkbox" id="display-intervals-toggle"> Intervals
-                        </label>
-                        <label class="checkbox-label compact">
-                            <input type="checkbox" id="toggle-overlay"> Overlay
-                        </label>
-                        <button id="clear-overlay-btn" class="secondary-btn small-btn">Clear</button>
-                        <div id="sound-toggle" class="sound-control-btn active" title="Toggle Sound">
-                            <span class="speaker-icon">🔊</span>
-                            <div class="playing-waves"><span></span><span></span><span></span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ROW 2: Fretboard -->
-                <div class="fb-board">
-                    <div id="guitar-fretboard" class="fretboard-svg-container"></div>
-                </div>
-
-                <!-- ROW 3: Input + Info -->
-                <div class="fb-input-row">
-                    <input type="text" id="manual-note-input" placeholder="e.g. C4 or সা" class="styled-input">
-                    <button id="play-note-btn" class="primary-btn small-btn">Play</button>
-                    <div id="position-info" class="fb-info-text">Select a note or scale</div>
-                </div>
-
-                <!-- NEW ROW: Music Theory Module -->
-                <div id="music-theory-panel" class="theory-panel" style="display: none;">
-                    <div class="theory-header">
-                        <span id="theory-title">Music Theory</span>
-                    </div>
-                    <div class="theory-content">
-                        <div class="theory-block">
-                            <span class="theory-label">Scale Formula</span>
-                            <div id="theory-formula" class="theory-value">--</div>
-                        </div>
-                        <div class="theory-block">
-                            <span class="theory-label">Notes</span>
-                            <div id="theory-notes" class="theory-value notes-highlight">--</div>
-                        </div>
-                        <div class="theory-block">
-                            <span class="theory-label">Characteristics</span>
-                            <div id="theory-desc" class="theory-value desc">--</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ROW 4: Scale + Pattern Buttons -->
-                <div class="fb-buttons-row">
-                    <div class="fb-btn-group">
-                        <span class="fb-btn-label">Scales & Raags</span>
-                        <div id="scale-buttons" class="button-grid"></div>
-                    </div>
-                    <div class="fb-btn-group">
-                        <span class="fb-btn-label">Bengali Patterns</span>
-                        <div id="pattern-buttons" class="button-grid"></div>
-                    </div>
-                    <div class="fb-btn-group">
-                        <span class="fb-btn-label">CAGED / TNPS Boxes</span>
-                        <div id="fb-position-filters" class="button-grid"></div>
-                    </div>
-                </div>
-
-                <!-- ROW 5: Tape + History -->
-                <div class="fb-bottom-row">
-                    <div class="fb-tape-wrap" style="display: flex; flex-direction: column; gap: 4px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span class="fb-btn-label" style="margin:0;">Transcript</span>
-                            <div style="display: flex; gap: 4px;">
-                                <button id="play-tape-btn" class="primary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">▶ Play</button>
-                                <button id="export-tape-btn" class="secondary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">💾 Export</button>
-                                <button id="clear-tape-btn" class="secondary-btn small-btn" style="width: auto; padding: 2px 8px; font-size: 0.65rem;">🗑 Clear</button>
+            <!-- SCREENS -->
+            
+            <!-- HOME SCREEN -->
+            <main class="screen active" id="home-screen">
+                <div class="dashboard-page">
+                    <h2 class="page-title">Welcome Back!</h2>
+                    
+                    <div class="dashboard-grid">
+                        <!-- Quick Access -->
+                        <div class="dash-card">
+                            <h3>Quick Access</h3>
+                            <div class="quick-links">
+                                <button class="dash-btn" onclick="document.querySelector('[data-target=fretboard-screen]').click()">Jam Station</button>
+                                <button class="dash-btn" onclick="document.querySelector('[data-target=tools-screen]').click()">Chromatic Tuner</button>
+                                <button class="dash-btn" onclick="document.querySelector('[data-target=circle-screen]').click()">Explore Harmony</button>
                             </div>
                         </div>
-                        <div id="sequence-tape" class="note-tape"></div>
-                    </div>
-                    <div class="fb-history-wrap">
-                        <span class="fb-btn-label">Recent</span>
-                        <div id="fretboard-history" class="fretboard-history-list"></div>
-                </div>
 
-                <!-- NEW ROW 6: Jam Station (Virtual Band & Solo Guide) -->
-                <div class="fb-jam-station" style="margin-top: 10px; padding: 12px; background: rgba(30, 0, 50, 0.4); border: 1px solid var(--primary); border-radius: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span id="jam-station-title" style="color: var(--primary); font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">Jam Station: Virtual Band</span>
-                        <div id="live-chord-indicator" style="background: rgba(255,215,0,0.2); padding: 4px 12px; border-radius: 20px; color: #fff; font-weight: bold; font-size: 1.2rem; display: none;">--</div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                        <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                            <label>Backing Track Progression</label>
-                            <select id="jam-progression" class="styled-input pointer">
-                                <option value="blues_12_bar">12-Bar Blues</option>
-                                <option value="pop_1564">Pop Ballad (I-V-vi-IV)</option>
-                                <option value="jazz_251">Jazz ii-V-I</option>
-                            </select>
-                        </div>
-                        <div class="settings-mini" style="width: 80px;">
-                            <label>Key</label>
-                            <select id="jam-key" class="styled-input pointer">
-                                <option value="C">C</option><option value="G">G</option><option value="D">D</option><option value="A" selected>A</option><option value="E">E</option>
-                            </select>
-                        </div>
-                        <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                            <label>Dynamic Soloing Guide</label>
-                            <select id="jam-solo-mode" class="styled-input pointer">
-                                <option value="none">Off</option>
-                                <option value="triads">Highlight Chord Triads</option>
-                                <option value="pentatonic" selected>Pentatonic Scales</option>
-                                <option value="blues">Blues Scales</option>
-                            </select>
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button id="jam-play-btn" class="primary-btn" style="width: 100px;">Play</button>
-                            <button id="jam-stop-btn" class="secondary-btn" style="width: 100px;" disabled>Stop</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- CIRCLE OF FIFTHS SCREEN -->
-        <main class="screen" id="circle-screen">
-            <div class="circle-page">
-                <div class="fb-topbar">
-                    <div class="fb-title">
-                        <h2>Circle of Fifths</h2>
-                        <div class="fb-subtitle">Interactive Key & Harmony Explorer</div>
-                    </div>
-                </div>
-                <div class="circle-content-row" style="display: flex; flex-direction: row; gap: 40px; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap;">
-                    <div class="circle-container" id="circle-container" style="flex: 1; min-width: 300px; max-width: 500px;">
-                        <!-- SVG built by JS will go here -->
-                    </div>
-                    <div class="circle-info-panel" id="circle-info-panel" style="flex: 1; min-width: 300px; max-width: 600px; background: var(--glass-bg); padding: 20px; border-radius: 12px;">
-                        <h3 id="cof-key-title">Select a Key</h3>
-                        <div class="settings-mini" style="margin-bottom: 20px;">
-                            <label for="cof-scale-select">Practice Scale:</label>
-                            <select id="cof-scale-select" class="styled-input pointer"></select>
-                        </div>
-                        <p id="cof-scale-notes" style="font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; color: var(--text-main); letter-spacing: 2px; margin: 10px 0 5px 0;">--</p>
-                        <p id="cof-key-sig" style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">--</p>
-                        <p id="cof-relative-minor">--</p>
-                        <div style="margin-bottom: 12px;">
-                            <span class="fb-btn-label">Diatonic Triads</span>
-                            <div id="cof-diatonic-chords" class="button-grid" style="margin-top: 4px;"></div>
-                        </div>
-
-                        <div id="cof-positions-section" style="margin-bottom: 20px;">
-                            <span class="fb-btn-label">Interactive Scale Boxes (CAGED / TNPS)</span>
-                            <div id="cof-position-filters" class="button-grid" style="margin-top: 4px;"></div>
-                        </div>
-                        <div class="cof-actions">
-                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;">
-                                <input type="checkbox" id="cof-intervals-toggle"> Show functional intervals instead of note names
-                            </label>
-                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;">
-                                <input type="checkbox" id="cof-show-voicings"> Show Open Chord Voicings
-                            </label>
-                            <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 12px;">
-                                <input type="checkbox" id="cof-quiz-mode"> Enable Ear Training Mode
-                            </label>
-                            <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence</button>
-                            <button id="cof-extract-penta" class="secondary-btn small-btn" style="margin-top:4px; width:100%; border:1px solid var(--primary); color:var(--primary)" disabled>Extract Pentatonic Scale</button>
+                        <!-- Random Practice Challenge -->
+                        <div class="dash-card challenge-card">
+                            <h3>🎸 Daily Practice Challenge</h3>
+                            <p id="daily-challenge-text">Loading...</p>
+                            <button id="generate-challenge-btn" class="primary-btn small-btn">Generate New</button>
                         </div>
                         
-                        <div id="quiz-module" style="display: none; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 12px; text-align: center; backdrop-filter: blur(10px);">
-                            <h4 style="color: var(--primary); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px;">Practice Quiz</h4>
-                            <select id="quiz-type" class="styled-input" style="width: 100%; margin-bottom: 10px; font-size: 0.75rem;">
-                                <option value="ear">Mystery Note (Ear Training)</option>
-                                <option value="degree">Scale Degrees (Theory Blitz)</option>
-                            </select>
-                            <div id="quiz-prompt" style="font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; color: #fff;">Ready?</div>
-                            <div id="quiz-status" style="font-size: 0.85rem; color: var(--text-muted); min-height: 20px;">Select a key, then press start.</div>
-                            <button id="quiz-start-btn" class="primary-btn small-btn" style="margin-top: 10px; width: 120px;">Start Quiz</button>
+                        <!-- Recently Opened -->
+                        <div class="dash-card">
+                            <h3>Recently Opened</h3>
+                            <ul id="recent-items-list" class="recent-list">
+                                <li class="empty-state">No recent items found.</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
+            </main>
 
-                <div class="cof-fb-wrapper" style="width: 100%; max-width: 1100px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-top: 20px;">
-                    <h4 style="text-align: center; color: var(--text-muted); margin-top: 0;">Key Scale Layout</h4>
-                    <div id="cof-fretboard" class="fretboard-svg-container"></div>
+            <!-- DETECTOR SCREEN -->
+            <main class="screen" id="detector-screen">
+                <div class="main-layout">
+                    <!-- LEFT PANEL: Visualizer & History -->
+                    <div class="left-panel">
+                        <section class="visualizer-section">
+                            <canvas id="waveform" class="visualizer-canvas"></canvas>
+                            <div class="confidence-container">
+                                <div id="confidence-bar"></div>
+                            </div>
+                            <div class="tuner-physics-module">
+                                <div class="gauge-background">
+                                    <div class="tick flat"></div><div class="tick perfect"></div><div class="tick sharp"></div>
+                                </div>
+                                <div class="needle" id="needle"></div>
+                            </div>
+                            <div class="note-display-module">
+                                <div class="note-wrap">
+                                    <span id="current-note" class="massive-note western-note">--</span>
+                                    <span class="divider">|</span>
+                                    <span id="current-sargam" class="massive-note sargam-note">-</span>
+                                </div>
+                                <span id="current-freq" class="metric-label">0.0 Hz</span>
+                                <div id="current-tab" class="tab-label"></div>
+                                <div class="live-chord-display">
+                                    <span class="chord-label">Estimated Chord: </span>
+                                    <span id="live-chord" class="chord-value">None</span>
+                                </div>
+                            </div>
+                        </section>
+                        <section class="history-section">
+                            <div class="history-header">
+                                <h3>Live Stream & History</h3>
+                                <div class="history-actions">
+                                    <button id="live-capture-btn" class="secondary-btn small-btn">🔴 Record to Tape: OFF</button>
+                                    <button id="save-btn" class="secondary-btn small-btn">Save Log</button>
+                                    <label for="file-input" class="secondary-btn small-btn file-label">Upload File</label>
+                                    <input type="file" id="file-input" hidden accept="audio/*">
+                                </div>
+                            </div>
+                            <div class="last10-module">
+                                <h4>Fast Buffer (Last 10 Nodes)</h4>
+                                <div id="last10-list"></div>
+                            </div>
+                            <div class="scrolling-ticker-wrapper">
+                                <div class="scrolling-ticker" id="scrolling-ticker"></div>
+                            </div>
+                            <div class="history-list-module" id="history-list">
+                                <div class="empty-state">No notes detected yet. Play something!</div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- RIGHT PANEL: Detector Settings -->
+                    <section class="controls-panel">
+                        <button id="start-btn" class="primary-btn">Start Detection</button>
+                        <button id="stop-btn" class="secondary-btn" disabled>Stop</button>
+                        <div class="settings-mini spacer-top">
+                            <label for="sensitivity">Mic Sensitivity</label>
+                            <input type="range" id="sensitivity" min="0" max="100" value="80">
+                        </div>
+                        <div class="settings-mini spacer-top">
+                            <label class="checkbox-label"><input type="checkbox" id="hw-noise-suppress" checked> HW Noise Suppression</label>
+                        </div>
+                        <div class="settings-mini spacer-top">
+                            <label for="sa-root">Sargam Root (Sa = S):</label>
+                            <select id="sa-root" class="styled-input pointer">
+                                <option value="C">C</option><option value="C#">C#</option><option value="D">D</option><option value="D#">D#</option><option value="E">E</option><option value="F">F</option><option value="F#">F#</option><option value="G">G</option><option value="G#">G#</option><option value="A">A</option><option value="A#">A#</option><option value="B">B</option>
+                            </select>
+                        </div>
+                        <div class="settings-mini spacer-top">
+                            <label for="sa-symbols">Sargam Notation Map:</label>
+                            <input type="text" id="sa-symbols" class="styled-input mono" value="S, S', R, R', G, M, M', P, P', D, D', N">
+                        </div>
+                        <div id="drop-zone" class="drop-zone-module">Drag & Drop Audio File to Analyze Server-Side</div>
+                    </section>
                 </div>
-            </div>
-        </main>
+            </main>
+
+            <!-- TOOLS SCREEN -->
+            <main class="screen" id="tools-screen">
+                <div class="tools-page">
+                    <h2 class="page-title">Guitar Tools Hub</h2>
+                    <div class="tools-grid">
+                        <div class="dash-card">
+                            <h3>Capo Calculator</h3>
+                            <div class="settings-mini">
+                                <label>Original Chord</label>
+                                <select id="capo-original" class="styled-input"><option value="G">G</option><option value="C">C</option><option value="D">D</option></select>
+                            </div>
+                            <div class="settings-mini spacer-top">
+                                <label>Capo Fret</label>
+                                <input type="number" id="capo-fret" class="styled-input" value="2" min="1" max="12">
+                            </div>
+                            <button id="capo-calc-btn" class="primary-btn spacer-top">Calculate</button>
+                            <div class="spacer-top">
+                                <strong>Actual Chord:</strong> <span id="capo-result" class="chord-value">A</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- SETTINGS SCREEN -->
+            <main class="screen" id="settings-screen">
+                <div class="settings-page">
+                    <h2 class="page-title">Settings</h2>
+                    <div class="dash-card" style="max-width: 500px;">
+                        <div class="settings-mini spacer-top">
+                            <label>Theme Preference</label>
+                            <select id="setting-theme" class="styled-input">
+                                <option value="dark">Dark Mode</option>
+                                <option value="light">Light Mode</option>
+                            </select>
+                        </div>
+                        <div class="settings-mini spacer-top">
+                            <label>Handedness</label>
+                            <select id="setting-handedness" class="styled-input">
+                                <option value="right">Right-Handed</option>
+                                <option value="left">Left-Handed</option>
+                            </select>
+                        </div>
+                        <div class="settings-mini spacer-top">
+                            <label>Default Tuning</label>
+                            <select id="setting-tuning" class="styled-input"></select>
+                        </div>
+                        <button id="save-settings-btn" class="primary-btn spacer-top">Save Settings</button>
+                    </div>
+                </div>
+            </main>
+
+            <!-- FRETBOARD SCREEN -->
+            <main class="screen" id="fretboard-screen">
+                <div class="fb-page">
+                    <div class="fb-topbar">
+                        <div class="fb-topbar-controls">
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                <select id="tuning-select" class="styled-input pointer fb-select"></select>
+                                <input type="text" id="custom-tuning-input" placeholder="E2-A2-D3-G3-B3-E4" class="styled-input fb-select" style="width: 120px; font-size: 0.7rem; display: none;">
+                                <button id="toggle-custom-tuning" class="secondary-btn small-btn" style="min-width: 30px; padding: 4px;" title="Custom Tuning">✎</button>
+                            </div>
+                            <label class="checkbox-label compact"><input type="checkbox" id="display-intervals-toggle"> Intervals</label>
+                            <label class="checkbox-label compact"><input type="checkbox" id="toggle-overlay"> Overlay</label>
+                            <button id="clear-overlay-btn" class="secondary-btn small-btn">Clear</button>
+                            <div id="sound-toggle" class="sound-control-btn active" title="Toggle Sound">
+                                <span class="speaker-icon">🔊</span>
+                                <div class="playing-waves"><span></span><span></span><span></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fb-board">
+                        <div id="guitar-fretboard" class="fretboard-svg-container"></div>
+                    </div>
+
+                    <div class="fb-input-row">
+                        <input type="text" id="manual-note-input" placeholder="e.g. C4 or সা" class="styled-input">
+                        <button id="play-note-btn" class="primary-btn small-btn">Play</button>
+                        <div id="position-info" class="fb-info-text">Select a note or scale</div>
+                    </div>
+
+                    <!-- Music Theory Module -->
+                    <div id="music-theory-panel" class="theory-panel" style="display: none;">
+                        <div class="theory-header"><span id="theory-title">Music Theory</span></div>
+                        <div class="theory-content">
+                            <div class="theory-block"><span class="theory-label">Scale Formula</span><div id="theory-formula" class="theory-value">--</div></div>
+                            <div class="theory-block"><span class="theory-label">Notes</span><div id="theory-notes" class="theory-value notes-highlight">--</div></div>
+                            <div class="theory-block"><span class="theory-label">Characteristics</span><div id="theory-desc" class="theory-value desc">--</div></div>
+                        </div>
+                    </div>
+
+                    <!-- Scale + Pattern Buttons -->
+                    <div class="fb-buttons-row">
+                        <div class="fb-btn-group"><span class="fb-btn-label">Scales & Raags</span><div id="scale-buttons" class="button-grid"></div></div>
+                        <div class="fb-btn-group"><span class="fb-btn-label">Bengali Patterns</span><div id="pattern-buttons" class="button-grid"></div></div>
+                        <div class="fb-btn-group"><span class="fb-btn-label">CAGED / TNPS Boxes</span><div id="fb-position-filters" class="button-grid"></div></div>
+                    </div>
+
+                    <!-- Tape + History -->
+                    <div class="fb-bottom-row">
+                        <div class="fb-tape-wrap" style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span class="fb-btn-label" style="margin:0;">Transcript</span>
+                                <div style="display: flex; gap: 4px;">
+                                    <button id="play-tape-btn" class="primary-btn small-btn">▶ Play</button>
+                                    <button id="export-tape-btn" class="secondary-btn small-btn">💾 Export</button>
+                                    <button id="clear-tape-btn" class="secondary-btn small-btn">🗑 Clear</button>
+                                </div>
+                            </div>
+                            <div id="sequence-tape" class="note-tape"></div>
+                        </div>
+                        <div class="fb-history-wrap">
+                            <span class="fb-btn-label">Recent</span>
+                            <div id="fretboard-history" class="fretboard-history-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Jam Station -->
+                    <div class="fb-jam-station" style="margin-top: 10px; padding: 12px; background: rgba(30, 0, 50, 0.4); border: 1px solid var(--primary); border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span id="jam-station-title" style="color: var(--primary); font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">Jam Station: Virtual Band</span>
+                            <div id="live-chord-indicator" style="background: rgba(255,215,0,0.2); padding: 4px 12px; border-radius: 20px; color: #fff; font-weight: bold; font-size: 1.2rem; display: none;">--</div>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
+                                <label>Backing Track Progression</label>
+                                <select id="jam-progression" class="styled-input pointer">
+                                    <option value="blues_12_bar">12-Bar Blues</option><option value="pop_1564">Pop Ballad (I-V-vi-IV)</option><option value="jazz_251">Jazz ii-V-I</option>
+                                </select>
+                            </div>
+                            <div class="settings-mini" style="width: 80px;">
+                                <label>Key</label>
+                                <select id="jam-key" class="styled-input pointer">
+                                    <option value="C">C</option><option value="G">G</option><option value="D">D</option><option value="A" selected>A</option><option value="E">E</option>
+                                </select>
+                            </div>
+                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
+                                <label>Dynamic Soloing Guide</label>
+                                <select id="jam-solo-mode" class="styled-input pointer">
+                                    <option value="none">Off</option><option value="triads">Highlight Chord Triads</option><option value="pentatonic" selected>Pentatonic Scales</option><option value="blues">Blues Scales</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                <button id="jam-play-btn" class="primary-btn" style="width: 100px;">Play</button>
+                                <button id="jam-stop-btn" class="secondary-btn" style="width: 100px;" disabled>Stop</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- CIRCLE OF FIFTHS SCREEN -->
+            <main class="screen" id="circle-screen">
+                <div class="circle-page">
+                    <div class="fb-topbar">
+                        <div class="fb-title"><h2>Circle of Fifths</h2></div>
+                    </div>
+                    <div class="circle-content-row" style="display: flex; flex-direction: row; gap: 40px; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap;">
+                        <div class="circle-container" id="circle-container" style="flex: 1; min-width: 300px; max-width: 500px;"></div>
+                        <div class="circle-info-panel" id="circle-info-panel" style="flex: 1; min-width: 300px; max-width: 600px; background: var(--glass-bg); padding: 20px; border-radius: 12px;">
+                            <h3 id="cof-key-title">Select a Key</h3>
+                            <div class="settings-mini" style="margin-bottom: 20px;">
+                                <label for="cof-scale-select">Practice Scale:</label>
+                                <select id="cof-scale-select" class="styled-input pointer"></select>
+                            </div>
+                            <p id="cof-scale-notes" style="font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; color: var(--text-main); letter-spacing: 2px; margin: 10px 0 5px 0;">--</p>
+                            <p id="cof-key-sig" style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">--</p>
+                            <p id="cof-relative-minor">--</p>
+                            <div style="margin-bottom: 12px;">
+                                <span class="fb-btn-label">Diatonic Triads</span>
+                                <div id="cof-diatonic-chords" class="button-grid" style="margin-top: 4px;"></div>
+                            </div>
+                            <div id="cof-positions-section" style="margin-bottom: 20px;">
+                                <span class="fb-btn-label">Interactive Scale Boxes (CAGED / TNPS)</span>
+                                <div id="cof-position-filters" class="button-grid" style="margin-top: 4px;"></div>
+                            </div>
+                            <div class="cof-actions">
+                                <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;"><input type="checkbox" id="cof-intervals-toggle"> Intervals instead of notes</label>
+                                <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;"><input type="checkbox" id="cof-show-voicings"> Open Chords</label>
+                                <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
     </div>
 
     <div class="background-blobs">
@@ -371,5 +376,4 @@
 
     <script type="module" src="/static/js/App.js"></script>
 </body>
-
 </html>
