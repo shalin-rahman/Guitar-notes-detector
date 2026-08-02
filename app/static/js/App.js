@@ -1112,6 +1112,8 @@ window.playSequence = (notes) => window.AhordianApp.playSequence(notes);
 window.loadTranscriptionToTape = (notes) => window.AhordianApp.loadTranscriptionToTape(notes);
 
 // Bootstrap
-document.addEventListener("DOMContentLoaded", () => {
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => { window.AhordianApp = new App(); });
+} else {
     window.AhordianApp = new App();
-});
+}
