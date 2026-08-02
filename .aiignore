@@ -1,0 +1,17 @@
+# General .aiignore to block heavy artifacts and prevent token bloat
+node_modules/
+bin/
+obj/
+dist/
+build/
+__pycache__/
+*.csv
+*.xlsx
+*.parquet
+*.apk
+*.ipa
+.venv/
+env/
+venv/
+.dart_tool/
+.angular/
