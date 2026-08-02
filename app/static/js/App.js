@@ -57,6 +57,13 @@ class App {
             soundToggle: document.getElementById('sound-toggle'),
             sequenceTape: document.getElementById('sequence-tape'),
             
+            // Music Theory Panel
+            theoryPanel: document.getElementById('music-theory-panel'),
+            theoryTitle: document.getElementById('theory-title'),
+            theoryFormula: document.getElementById('theory-formula'),
+            theoryNotes: document.getElementById('theory-notes'),
+            theoryDesc: document.getElementById('theory-desc'),
+            
             // Metronome
             metroToggle: document.getElementById('metronome-toggle'),
             metroBpm: document.getElementById('metronome-bpm'),
@@ -425,6 +432,50 @@ class App {
 
         if (this.elements.positionInfo) {
             this.elements.positionInfo.textContent = `▶ ${scaleName}: ${fullDisplayNotes.join('-')}`;
+        }
+        
+        // Update Music Theory Panel
+        if (this.elements.theoryPanel) {
+            this.elements.theoryPanel.style.display = 'block';
+            this.elements.theoryTitle.textContent = `${rootName} ${scaleName}`;
+            
+            // Generate Interval Formula Display
+            let formulaStr = "";
+            if (scale.intervals) {
+                // Determine diatonic function
+                formulaStr = scale.intervals.map(i => {
+                    const steps = i;
+                    if(steps===0) return "1";
+                    if(steps===1) return "♭2";
+                    if(steps===2) return "2";
+                    if(steps===3) return "♭3";
+                    if(steps===4) return "3";
+                    if(steps===5) return "4";
+                    if(steps===6) return "♭5";
+                    if(steps===7) return "5";
+                    if(steps===8) return "♭6";
+                    if(steps===9) return "6";
+                    if(steps===10) return "♭7";
+                    if(steps===11) return "7";
+                    return steps;
+                }).join(" - ");
+            } else if (scale.arohan) {
+                formulaStr = "Arohan: " + scale.arohan.join(" ") + " | Aborohan: " + scale.aborohan.join(" ");
+            }
+            
+            this.elements.theoryFormula.textContent = formulaStr;
+            this.elements.theoryNotes.textContent = displayAscending.map(n => n.replace(/[0-9]/g, '')).join(" - ");
+            
+            // Generate characteristic description
+            let desc = "Standard diatonic scale.";
+            if (scaleName.includes("Major")) desc = "Bright, happy, resolving tone. The foundation of Western harmony.";
+            else if (scaleName.includes("Minor")) desc = "Sad, melancholic, serious tone. Natural minor scale.";
+            else if (scaleName.includes("Pentatonic")) desc = "5-note scale. Extremely versatile for soloing in rock, blues, and pop.";
+            else if (scaleName.includes("Blues")) desc = "Features the 'blue note' (flat 5) for tension and soulful expression.";
+            else if (scaleName.includes("Bhairav")) desc = "Morning Raag. Serious and devotional character (♭2, ♭6).";
+            else if (scaleName.includes("Yaman")) desc = "Evening Raag. Peaceful and expansive (♯4).";
+            
+            this.elements.theoryDesc.textContent = desc;
         }
 
         this.playSequence(fullScale, 350);

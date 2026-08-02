@@ -709,6 +709,73 @@ input[type=range] { width: 100%; }
     dominant-baseline: middle;
 }
 
+/* Music Theory Panel */
+.theory-panel {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.8), rgba(10, 10, 10, 0.9));
+    border: 1px solid var(--primary);
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 215, 0, 0.05);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--primary);
+}
+
+.theory-header {
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    padding-bottom: 6px;
+}
+
+#theory-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+.theory-content {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.theory-block {
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.theory-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.theory-value {
+    font-size: 0.95rem;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.theory-value.notes-highlight {
+    color: #fff;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+
+.theory-value.desc {
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
 /* Drop Zone */
 .drop-zone-module {
     flex: 1;
