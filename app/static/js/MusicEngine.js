@@ -55,4 +55,38 @@ export default class MusicEngine {
         }
         return "Unknown";
     }
+
+    static getScaleForChord(chordData, soloMode) {
+        // chordData has: name, root, type (major, minor, dominant7, minor7, major7)
+        if (!chordData || !soloMode || soloMode === "none") return [];
+        
+        const rootIdx = AppConfig.NOTE_NAMES.indexOf(chordData.root);
+        let intervals = [];
+
+        if (soloMode === "triads") {
+            if (chordData.type.includes("minor")) {
+                intervals = [0, 3, 7];
+            } else {
+                intervals = [0, 4, 7];
+            }
+        } else if (soloMode === "pentatonic") {
+            if (chordData.type.includes("minor")) {
+                intervals = [0, 3, 5, 7, 10]; // Minor Pentatonic
+            } else {
+                intervals = [0, 2, 4, 7, 9]; // Major Pentatonic
+            }
+        } else if (soloMode === "blues") {
+            if (chordData.type.includes("minor")) {
+                intervals = [0, 3, 5, 6, 7, 10];
+            } else {
+                // Major blues
+                intervals = [0, 2, 3, 4, 7, 9];
+            }
+        }
+
+        return intervals.map(interval => {
+            const noteIdx = (rootIdx + interval) % 12;
+            return AppConfig.NOTE_NAMES[noteIdx];
+        });
+    }
 }

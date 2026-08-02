@@ -255,6 +255,43 @@
                     <div class="fb-history-wrap">
                         <span class="fb-btn-label">Recent</span>
                         <div id="fretboard-history" class="fretboard-history-list"></div>
+                </div>
+
+                <!-- NEW ROW 6: Jam Station (Virtual Band & Solo Guide) -->
+                <div class="fb-jam-station" style="margin-top: 10px; padding: 12px; background: rgba(30, 0, 50, 0.4); border: 1px solid var(--primary); border-radius: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span id="jam-station-title" style="color: var(--primary); font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">Jam Station: Virtual Band</span>
+                        <div id="live-chord-indicator" style="background: rgba(255,215,0,0.2); padding: 4px 12px; border-radius: 20px; color: #fff; font-weight: bold; font-size: 1.2rem; display: none;">--</div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="settings-mini" style="flex: 1; min-width: 150px;">
+                            <label>Backing Track Progression</label>
+                            <select id="jam-progression" class="styled-input pointer">
+                                <option value="blues_12_bar">12-Bar Blues</option>
+                                <option value="pop_1564">Pop Ballad (I-V-vi-IV)</option>
+                                <option value="jazz_251">Jazz ii-V-I</option>
+                            </select>
+                        </div>
+                        <div class="settings-mini" style="width: 80px;">
+                            <label>Key</label>
+                            <select id="jam-key" class="styled-input pointer">
+                                <option value="C">C</option><option value="G">G</option><option value="D">D</option><option value="A" selected>A</option><option value="E">E</option>
+                            </select>
+                        </div>
+                        <div class="settings-mini" style="flex: 1; min-width: 150px;">
+                            <label>Dynamic Soloing Guide</label>
+                            <select id="jam-solo-mode" class="styled-input pointer">
+                                <option value="none">Off</option>
+                                <option value="triads">Highlight Chord Triads</option>
+                                <option value="pentatonic" selected>Pentatonic Scales</option>
+                                <option value="blues">Blues Scales</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button id="jam-play-btn" class="primary-btn" style="width: 100px;">Play</button>
+                            <button id="jam-stop-btn" class="secondary-btn" style="width: 100px;" disabled>Stop</button>
+                        </div>
                     </div>
                 </div>
             </div>
