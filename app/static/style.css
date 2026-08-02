@@ -1183,6 +1183,70 @@ input[type=range] { width: 100%; }
     margin-top: 4px;
 }
 
+/* ============================================================
+   PHASE 3: Ear Training & Practice Generator Styles
+   ============================================================ */
+
+.ear-choice-btn {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 16px 12px;
+    border-radius: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    text-align: center;
+}
+
+.ear-choice-btn:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.12);
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.15);
+}
+
+.ear-choice-btn.correct {
+    background: rgba(34, 197, 94, 0.25) !important;
+    border-color: #22c55e !important;
+    color: #4ade80 !important;
+    font-weight: 800;
+}
+
+.ear-choice-btn.wrong {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #f87171 !important;
+}
+
+.ear-choice-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.ear-feedback {
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.ear-feedback.correct {
+    color: #4ade80;
+    text-shadow: 0 0 12px rgba(74, 222, 128, 0.4);
+}
+
+.ear-feedback.wrong {
+    color: #f87171;
+}
+
+/* Practice Routine Animation */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+
 
 /* Circle Highlight System */
 .cof-segment {

@@ -3,7 +3,6 @@ export default class StorageManager {
     static HISTORY_KEY = 'ahordian_history';
 
     static DEFAULT_SETTINGS = {
-        theme: 'dark',
         handedness: 'right',
         defaultTuning: 'Standard (E2-A2-D3-G3-B3-E4)',
         metronome: {

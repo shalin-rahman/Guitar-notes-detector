@@ -7,7 +7,10 @@ import CircleManager from './CircleManager.js';
 import Metronome from './Metronome.js';
 import StorageManager from './StorageManager.js';
 import BackingTrackEngine from './BackingTrackEngine.js';
-import StorageManager from './StorageManager.js';
+import VoicingGenerator from './VoicingGenerator.js';
+import EarTrainingManager from './EarTrainingManager.js';
+import LessonManager from './LessonManager.js';
+import TabPlayer from './TabPlayer.js';
 
 class App {
     constructor() {
@@ -85,7 +88,6 @@ class App {
             toggleCustomTuningBtn: document.getElementById('toggle-custom-tuning'),
             
             // Settings
-            settingTheme: document.getElementById('setting-theme'),
             settingHandedness: document.getElementById('setting-handedness'),
             settingTuning: document.getElementById('setting-tuning'),
             saveSettingsBtn: document.getElementById('save-settings-btn'),
@@ -112,9 +114,14 @@ class App {
         this.tracker = new TrackingManager(this.elements);
         this.ui = new UIManager(this.elements, this.tracker);
         this.fretboard = new FretboardManager('guitar-fretboard');
+        this.chordFretboard = new FretboardManager('chord-exp-fretboard');
+        this.scaleFretboard = new FretboardManager('scale-exp-fretboard');
         this.circleManager = new CircleManager('circle-container', this);
         this.player = null;
         this.backingEngine = null;
+        this.earTraining = null; // initialized lazily on first visit
+        this.lessonManager = null;
+        this.tabPlayer = null;
 
         this.bindEvents();
         this.loadFretboardHistory();
@@ -165,13 +172,72 @@ class App {
                 btn.classList.add('active');
                 
                 if (target === 'home-screen') this.updateDashboard();
+                
+                // Lazy-init Ear Training on first visit
+                if (target === 'ear-training-screen' && !this.earTraining) {
+                    this.initAudioContext();
+                    this.earTraining = new EarTrainingManager(this);
+                }
+                
+                // Lazy-init Lessons on first visit
+                if (target === 'lessons-screen' && !this.lessonManager) {
+                    this.initAudioContext();
+                    this.lessonManager = new LessonManager(this);
+                }
+
+                // Lazy-init Tab Player on first visit
+                if (target === 'tab-player-screen' && !this.tabPlayer) {
+                    this.initAudioContext();
+                    this.tabPlayer = new TabPlayer(this);
+                }
+                
+                // Refresh high scores when visiting Practice screen
+                if (target === 'practice-screen') this.loadHighScores();
             });
         });
+
+        // Practice Generator
+        const pracBpm = document.getElementById('prac-bpm');
+        const pracBpmLabel = document.getElementById('prac-bpm-label');
+        if (pracBpm && pracBpmLabel) {
+            pracBpm.addEventListener('input', () => {
+                pracBpmLabel.textContent = pracBpm.value + ' BPM';
+            });
+        }
+
+        const pracGenBtn = document.getElementById('prac-generate-btn');
+        if (pracGenBtn) pracGenBtn.addEventListener('click', () => this.generatePracticeRoutine());
+
+        // Tap Tempo
+        const tapBtn = document.getElementById('prac-tap-btn');
+        if (tapBtn) {
+            this._tapTimes = [];
+            tapBtn.addEventListener('click', () => {
+                const now = Date.now();
+                this._tapTimes.push(now);
+                if (this._tapTimes.length > 8) this._tapTimes.shift();
+                if (this._tapTimes.length >= 2) {
+                    const intervals = [];
+                    for (let i = 1; i < this._tapTimes.length; i++) {
+                        intervals.push(this._tapTimes[i] - this._tapTimes[i - 1]);
+                    }
+                    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+                    const bpm = Math.round(60000 / avgInterval);
+                    if (pracBpm) pracBpm.value = Math.min(200, Math.max(40, bpm));
+                    if (pracBpmLabel) pracBpmLabel.textContent = Math.min(200, Math.max(40, bpm)) + ' BPM';
+                    tapBtn.textContent = `👆 ${Math.min(200, Math.max(40, bpm))} BPM`;
+                    clearTimeout(this._tapTimeout);
+                    this._tapTimeout = setTimeout(() => {
+                        tapBtn.textContent = '👆 Tap Tempo';
+                        this._tapTimes = [];
+                    }, 3000);
+                }
+            });
+        }
 
         if (this.elements.saveSettingsBtn) {
             this.elements.saveSettingsBtn.addEventListener('click', () => {
                 StorageManager.saveSettings({
-                    theme: this.elements.settingTheme.value,
                     handedness: this.elements.settingHandedness.value,
                     defaultTuning: this.elements.settingTuning.value
                 });
@@ -232,6 +298,13 @@ class App {
                 this.fretboard.clearOverlay();
             });
         }
+        
+        // Explorer Handlers
+        const chordBtn = document.getElementById('chord-exp-search-btn');
+        if (chordBtn) chordBtn.addEventListener('click', () => this.exploreChord());
+        
+        const scaleBtn = document.getElementById('scale-exp-view-btn');
+        if (scaleBtn) scaleBtn.addEventListener('click', () => this.exploreScale());
 
         this.elements.playNoteBtn.addEventListener('click', () => {
             const note = this.elements.manualNoteInput.value.trim();
@@ -293,23 +366,29 @@ class App {
         });
 
         // Custom Tuning Toggle
-        this.elements.toggleCustomTuningBtn.addEventListener('click', () => {
-            const isHidden = this.elements.customTuningInput.style.display === 'none';
-            this.elements.customTuningInput.style.display = isHidden ? 'block' : 'none';
-            this.elements.tuningSelect.style.display = isHidden ? 'none' : 'block';
-            this.elements.toggleCustomTuningBtn.textContent = isHidden ? '✖' : '✎';
-        });
+        if(this.elements.toggleCustomTuningBtn) {
+            this.elements.toggleCustomTuningBtn.addEventListener('click', () => {
+                const isHidden = this.elements.customTuningInput.style.display === 'none';
+                this.elements.customTuningInput.style.display = isHidden ? 'block' : 'none';
+                this.elements.tuningSelect.style.display = isHidden ? 'none' : 'block';
+                this.elements.toggleCustomTuningBtn.textContent = isHidden ? '✖' : '✎';
+            });
+        }
 
-        this.elements.customTuningInput.addEventListener('change', (e) => {
-            const val = e.target.value.trim().toUpperCase();
-            if (val) {
-                const notes = val.split('-').map(n => n.trim());
-                if (notes.length === 6) {
-                    this.fretboard.setTuning(notes);
-                    this.elements.positionInfo.textContent = `Custom Tuning Set: ${notes.join('-')}`;
+        if(this.elements.customTuningInput) {
+            this.elements.customTuningInput.addEventListener('change', (e) => {
+                const val = e.target.value.trim().toUpperCase();
+                if (val) {
+                    const notes = val.split('-').map(n => n.trim());
+                    if (notes.length === 6) {
+                        this.fretboard.setTuning(notes);
+                        if(this.chordFretboard) this.chordFretboard.setTuning(notes);
+                        if(this.scaleFretboard) this.scaleFretboard.setTuning(notes);
+                        this.elements.positionInfo.textContent = `Custom Tuning Set: ${notes.join('-')}`;
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // 6. Local File Analysis (Drag & Drop)
         const dropZone = document.getElementById('drop-zone');
@@ -338,23 +417,15 @@ class App {
     applySettings() {
         const settings = StorageManager.loadSettings();
         
-        // Apply Theme
-        if (settings.theme === 'light') {
-            document.body.classList.remove('dark-mode');
-            document.body.classList.add('light-mode');
-        } else {
-            document.body.classList.remove('light-mode');
-            document.body.classList.add('dark-mode');
-        }
-        
         // Sync Settings UI
-        if (this.elements.settingTheme) this.elements.settingTheme.value = settings.theme;
         if (this.elements.settingHandedness) this.elements.settingHandedness.value = settings.handedness;
         if (this.elements.settingTuning) this.elements.settingTuning.value = settings.defaultTuning;
         
         // Pass handedness to fretboard if method exists
         if (this.fretboard && typeof this.fretboard.setHandedness === 'function') {
             this.fretboard.setHandedness(settings.handedness);
+            if(this.chordFretboard) this.chordFretboard.setHandedness(settings.handedness);
+            if(this.scaleFretboard) this.scaleFretboard.setHandedness(settings.handedness);
         }
     }
 
@@ -390,6 +461,90 @@ class App {
         this.elements.dailyChallengeText.innerHTML = `Play the <strong>${key} ${scale}</strong> using <strong>${mode}</strong> at ${bpm} BPM.`;
     }
 
+    generatePracticeRoutine() {
+        const focus = document.getElementById('prac-focus')?.value || 'random';
+        const bpm = document.getElementById('prac-bpm')?.value || 80;
+        const duration = parseInt(document.getElementById('prac-duration')?.value || 10);
+        const output = document.getElementById('prac-routine-output');
+        if (!output) return;
+
+        const keys = ['C', 'G', 'D', 'A', 'E', 'F', 'Bb'];
+        const pentatonics = ['C Major Pentatonic', 'A Minor Pentatonic', 'G Major Pentatonic', 'E Minor Pentatonic'];
+        const techniques = ['Alternate Picking', 'Economy Picking', 'Legato (Hammer-ons & Pull-offs)', 'String Skipping', 'Hybrid Picking'];
+        const strumPatterns = ['Down-Down-Up-Down-Up', 'Down-Up-Down-Up', 'D-DU-UDU', 'Syncopated Reggae'];
+        
+        let resolvedFocus = focus;
+        if (focus === 'random') {
+            const options = ['technique', 'scales', 'chords', 'rhythm', 'theory'];
+            resolvedFocus = options[Math.floor(Math.random() * options.length)];
+        }
+
+        const perSegment = Math.max(2, Math.floor(duration / 4));
+        let routine = [];
+
+        if (resolvedFocus === 'technique') {
+            const tech = techniques[Math.floor(Math.random() * techniques.length)];
+            const key = keys[Math.floor(Math.random() * keys.length)];
+            routine = [
+                { title: 'Warm Up', desc: `Chromatic exercise across all strings. Start at 60 BPM.`, duration: perSegment, icon: '🔥' },
+                { title: 'Technique Focus', desc: `${tech} — Play ${key} Major scale pattern up and down at ${bpm} BPM.`, duration: perSegment * 2, icon: '🎯' },
+                { title: 'Apply to Song', desc: `Pick a riff or lick you know. Apply ${tech} throughout.`, duration: perSegment, icon: '🎸' },
+                { title: 'Cool Down', desc: 'Slow, relaxed scale run. Focus on clean tone.', duration: Math.max(1, duration - perSegment * 4), icon: '✨' }
+            ];
+        } else if (resolvedFocus === 'scales') {
+            const scale = pentatonics[Math.floor(Math.random() * pentatonics.length)];
+            routine = [
+                { title: 'Position 1', desc: `Play ${scale} in Position 1 (open position). Ascending & descending. BPM: ${bpm}`, duration: perSegment, icon: '📍' },
+                { title: 'Position 2 & 3', desc: `Shift to positions 2 and 3. Connect shapes smoothly.`, duration: perSegment, icon: '📍' },
+                { title: 'Full Fretboard Run', desc: `Play all 5 CAGED positions of ${scale} from low E to high e.`, duration: perSegment, icon: '🏃' },
+                { title: 'Improvise!', desc: `Use ${scale} over a backing track. Try targeting chord tones.`, duration: duration - perSegment * 3, icon: '🎵' }
+            ];
+        } else if (resolvedFocus === 'chords') {
+            const key = keys[Math.floor(Math.random() * keys.length)];
+            routine = [
+                { title: 'Open Chord Review', desc: `Drill G → C → D → Em transitions. Clean fret contact. ${bpm} BPM`, duration: perSegment, icon: '🎹' },
+                { title: 'Barre Chord Focus', desc: `Practice F Major, Bm. Slow strumming, focus on full ring.`, duration: perSegment, icon: '💪' },
+                { title: 'Diatonic Triads in ${key}', desc: `Play all 7 diatonic chords in key of ${key}. Use 3-note voicings.`, duration: perSegment, icon: '🎼' },
+                { title: 'Rhythm Variation', desc: `Apply chord changes to a simple I → IV → V → I progression in ${key}.`, duration: duration - perSegment * 3, icon: '🥁' }
+            ];
+        } else if (resolvedFocus === 'rhythm') {
+            const pattern = strumPatterns[Math.floor(Math.random() * strumPatterns.length)];
+            routine = [
+                { title: 'Tap Tempo Drill', desc: `Use the Tap Tempo button to set ${bpm} BPM. Feel the pulse. Count aloud: 1-2-3-4.`, duration: perSegment, icon: '🥁' },
+                { title: 'Pattern Isolation', desc: `Practice strumming pattern: "${pattern}" on an open chord. Slow first.`, duration: perSegment * 2, icon: '🎵' },
+                { title: 'Chord + Rhythm', desc: `Apply pattern to a G → C → D progression. Keep the groove tight.`, duration: duration - perSegment * 3, icon: '🔥' }
+            ];
+        } else {
+            // theory
+            routine = [
+                { title: 'Interval Ear Training', desc: `Open the Ear Training module. Do 10 interval recognition questions.`, duration: perSegment, icon: '👂' },
+                { title: 'Circle of Fifths', desc: `Visit the Circle of Fifths. Select 3 keys, identify their relative minors and diatonic chords.`, duration: perSegment, icon: '🎡' },
+                { title: 'Chord Construction', desc: `In the Chord Explorer, build and play a Major 7, Minor 7, and Dominant 7 chord.`, duration: perSegment, icon: '🏗️' },
+                { title: 'Apply & Improvise', desc: `Find a key using the Circle. Play the diatonic chords, then solo with the matching pentatonic.`, duration: duration - perSegment * 3, icon: '🎯' }
+            ];
+        }
+
+        output.innerHTML = routine.map((item, i) => `
+            <div class="theory-panel" style="margin-bottom: 12px; animation: fadeInUp ${0.2 + i * 0.1}s ease;">
+                <div class="theory-header">
+                    <span>${item.icon} ${i + 1}. ${item.title}</span>
+                    <span style="color:var(--primary); font-size:0.85rem;">${item.duration} min</span>
+                </div>
+                <div style="padding: 10px 16px; color: var(--text-muted);">${item.desc}</div>
+            </div>
+        `).join('');
+    }
+
+    loadHighScores() {
+        const keys = ['intervals', 'chords', 'notes'];
+        keys.forEach(k => {
+            const el = document.getElementById(`hs-${k}`);
+            if (el) el.textContent = localStorage.getItem(`ear_training_${k}`) || '0';
+        });
+        const streakEl = document.getElementById('hs-streak');
+        if (streakEl) streakEl.textContent = localStorage.getItem('ear_best_streak') || '0';
+    }
+
     onJamChordChange(chordData, numeral) {
         if (this.elements.liveChordIndicator) {
             this.elements.liveChordIndicator.textContent = `${chordData.name} (${numeral})`;
@@ -408,6 +563,149 @@ class App {
             this.fretboard.showScale(scaleNotes, {min: 0, max: 12});
         } else {
             this.fretboard.clearOverlay();
+        }
+    }
+
+    exploreChord() {
+        const root = document.getElementById('chord-exp-root').value;
+        const type = document.getElementById('chord-exp-type').value;
+        
+        document.getElementById('chord-exp-title').textContent = `${root} ${type}`;
+        
+        let intervals = [];
+        let formula = "";
+        
+        switch (type) {
+            case 'major': intervals = [0, 4, 7]; formula = "1 - 3 - 5"; break;
+            case 'minor': intervals = [0, 3, 7]; formula = "1 - b3 - 5"; break;
+            case '7': intervals = [0, 4, 7, 10]; formula = "1 - 3 - 5 - b7"; break;
+            case 'maj7': intervals = [0, 4, 7, 11]; formula = "1 - 3 - 5 - 7"; break;
+            case 'm7': intervals = [0, 3, 7, 10]; formula = "1 - b3 - 5 - b7"; break;
+            case 'sus2': intervals = [0, 2, 7]; formula = "1 - 2 - 5"; break;
+            case 'sus4': intervals = [0, 5, 7]; formula = "1 - 4 - 5"; break;
+            case 'dim': intervals = [0, 3, 6]; formula = "1 - b3 - b5"; break;
+            case 'aug': intervals = [0, 4, 8]; formula = "1 - 3 - #5"; break;
+        }
+
+        const rootIdx = AppConfig.NOTE_NAMES.indexOf(root);
+        const notes = intervals.map(interval => {
+            const noteIdx = (rootIdx + interval) % 12;
+            return AppConfig.NOTE_NAMES[noteIdx];
+        });
+        
+        document.getElementById('chord-exp-formula').textContent = formula;
+        document.getElementById('chord-exp-notes').textContent = notes.join(" - ");
+        
+        if(this.chordFretboard) {
+            this.chordFretboard.showScale(notes, {min: 0, max: 15});
+            
+            // Generate Voicings
+            const voicingsContainer = document.getElementById('chord-exp-voicings');
+            voicingsContainer.innerHTML = '';
+            
+            const voicings = VoicingGenerator.generateVoicings(this.chordFretboard.strings, notes, root);
+            
+            if (voicings && voicings.length > 0) {
+                // Store the current voicing for playback
+                let currentVoicing = null;
+                
+                voicings.forEach((v, idx) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'secondary-btn small-btn';
+                    btn.textContent = v.name;
+                    btn.onclick = () => {
+                        this.chordFretboard.showVoicing(v.positions);
+                        currentVoicing = v.positions;
+                        
+                        // Highlight active button
+                        Array.from(voicingsContainer.children).forEach(c => c.classList.remove('primary-btn'));
+                        Array.from(voicingsContainer.children).forEach(c => c.classList.add('secondary-btn'));
+                        btn.classList.remove('secondary-btn');
+                        btn.classList.add('primary-btn');
+                        
+                        document.getElementById('chord-exp-play-btn').disabled = false;
+                    };
+                    voicingsContainer.appendChild(btn);
+                    
+                    // Show first voicing by default
+                    if (idx === 0) btn.click();
+                });
+                
+                const playBtn = document.getElementById('chord-exp-play-btn');
+                playBtn.onclick = () => {
+                    if(currentVoicing) {
+                        const chordNotes = currentVoicing.map(p => this.chordFretboard.getNoteAt(p.s, p.f));
+                        this.playSequence([chordNotes.join('-')], 800);
+                    }
+                };
+                
+            } else {
+                voicingsContainer.innerHTML = '<span class="empty-state">No common voicings found in this tuning.</span>';
+                document.getElementById('chord-exp-play-btn').disabled = true;
+            }
+        }
+    }
+
+    exploreScale() {
+        const root = document.getElementById('scale-exp-root').value;
+        const type = document.getElementById('scale-exp-type').value;
+        
+        document.getElementById('scale-exp-title').textContent = `${root} ${type}`;
+        
+        let intervals = [];
+        let formula = "";
+        let desc = "";
+        
+        if (type.includes("Major Pentatonic")) {
+            intervals = [0, 2, 4, 7, 9]; formula = "1 - 2 - 3 - 5 - 6"; desc = "5-note scale. Extremely versatile for soloing in rock and pop.";
+        } else if (type.includes("Minor Pentatonic")) {
+            intervals = [0, 3, 5, 7, 10]; formula = "1 - b3 - 4 - 5 - b7"; desc = "The classic rock soloing scale.";
+        } else if (type.includes("Blues")) {
+            intervals = [0, 3, 5, 6, 7, 10]; formula = "1 - b3 - 4 - b5 - 5 - b7"; desc = "Features the 'blue note' (flat 5) for tension and soulful expression.";
+        } else if (type.includes("Minor")) {
+            intervals = [0, 2, 3, 5, 7, 8, 10]; formula = "1 - 2 - b3 - 4 - 5 - b6 - b7"; desc = "Natural minor scale. Sad, melancholic, serious tone.";
+        } else {
+            // Default Major
+            intervals = [0, 2, 4, 5, 7, 9, 11]; formula = "1 - 2 - 3 - 4 - 5 - 6 - 7"; desc = "Bright, happy, resolving tone. The foundation of Western harmony.";
+        }
+
+        const rootIdx = AppConfig.NOTE_NAMES.indexOf(root);
+        const notes = intervals.map(interval => {
+            const noteIdx = (rootIdx + interval) % 12;
+            return AppConfig.NOTE_NAMES[noteIdx];
+        });
+        
+        document.getElementById('scale-exp-formula').textContent = formula;
+        document.getElementById('scale-exp-notes').textContent = notes.join(" - ");
+        document.getElementById('scale-exp-desc').textContent = desc;
+        
+        if(this.scaleFretboard) {
+            // First, map the scale purely as labels on the fretboard
+            this.scaleFretboard.showScale(notes, {min: 0, max: 15});
+            
+            // Collect the full 2-octave sequence for playback
+            const rootIdxBase = AppConfig.NOTE_NAMES.indexOf(root);
+            const baseOctave = 3;
+            
+            const playbackSequence = [];
+            intervals.forEach(interval => {
+                const totalSteps = rootIdxBase + interval;
+                const noteIdx = totalSteps % 12;
+                const octaveShift = Math.floor(totalSteps / 12);
+                playbackSequence.push(AppConfig.NOTE_NAMES[noteIdx] + (baseOctave + octaveShift));
+            });
+            // Add high octave root
+            const highRootSteps = rootIdxBase + 12;
+            playbackSequence.push(AppConfig.NOTE_NAMES[highRootSteps % 12] + (baseOctave + Math.floor(highRootSteps / 12)));
+            
+            const descending = [...playbackSequence].reverse().slice(1);
+            const fullScale = [...playbackSequence, ...descending];
+            
+            const playBtn = document.getElementById('scale-exp-play-btn');
+            playBtn.disabled = false;
+            playBtn.onclick = () => {
+                this.playSequence(fullScale, 300);
+            };
         }
     }
 
