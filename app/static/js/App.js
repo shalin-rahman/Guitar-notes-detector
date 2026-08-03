@@ -24,7 +24,6 @@ import { Icons } from './Icons.js';
 class App {
     constructor() {
         this.metronome = new Metronome();
-        this.initIcons();
         
         this.isStarted = false;
         this.animationId = null;
@@ -152,12 +151,24 @@ class App {
         this.tabPlayer = null;
 
         this.bindEvents();
+        this.initIcons();
         this.loadFretboardHistory();
         this.loadSamples();
         this.populateTunings();
         this.applySettings();
         this.updateDashboard();
         FileManager.init(this.elements.dropZone, this.elements.fileInput, this.tracker);
+    }
+
+    initIcons() {
+        document.querySelectorAll('.nav-btn[data-target]').forEach(btn => {
+            const target = btn.dataset.target;
+            if (target && Icons[target]) {
+                // prepend icon SVG, preserve existing text
+                const text = btn.textContent.trim();
+                btn.innerHTML = Icons[target] + ' ' + text;
+            }
+        });
     }
 
     bindEvents() {
