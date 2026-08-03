@@ -1,4 +1,5 @@
 import { AudioSessionType } from './audio/AudioSessionManager.js';
+import { icon } from './Icons.js';
 
 export const SONG_TABS = [
     {
@@ -107,7 +108,8 @@ export default class TabPlayer {
             this.elements.loopBtn.addEventListener('click', () => {
                 this.isLooping = !this.isLooping;
                 this.elements.loopBtn.classList.toggle('active', this.isLooping);
-                this.elements.loopBtn.textContent = this.isLooping ? '🔁 Loop: ON' : '🔁 Loop: OFF';
+                this.elements.loopBtn.innerHTML =
+                    `<span class="btn-ico">${icon('loop')}</span>Loop: ${this.isLooping ? 'ON' : 'OFF'}`;
             });
         }
         if (this.elements.speedSelect) {

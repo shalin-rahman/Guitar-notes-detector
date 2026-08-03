@@ -1,5 +1,6 @@
 import AppConfig from './AppConfig.js';
 import FretboardManager from './FretboardManager.js';
+import { icon } from './Icons.js';
 
 export default class CircleManager {
     constructor(containerId, appRef = null) {
@@ -227,7 +228,7 @@ export default class CircleManager {
         if (!this.quizActive || !this.targetNote) return;
         const noteOnly = noteName.replace(/[0-9]/g, '');
         if (noteOnly === this.targetNote) {
-            this.elements.quizPrompt.textContent = "CORRECT! ✨";
+            this.elements.quizPrompt.innerHTML = `<span class="btn-ico">${icon('check')}</span>CORRECT!`;
             this.elements.quizStatus.textContent = `Great! That was indeed ${this.targetNote}`;
             if (this.fretboard) {
                 this.fretboard.showScale([this.targetNote]);
@@ -277,7 +278,7 @@ export default class CircleManager {
         const sigData = this.getKeySignatureDetails(idx);
         let sigText = sigData.count === 0 ? "Natural Key" : `${sigData.count} ${sigData.type === '#' ? "Sharps (#)" : "Flats (b)"}`;
         if (sigData.notes.length > 0) {
-            sigText += ` <span style="font-size:0.7rem; color:var(--primary); opacity:0.8;">(${sigData.notes.join(', ')})</span>`;
+            sigText += ` <span class="sig-notes">(${sigData.notes.join(', ')})</span>`;
         }
         
         const roman = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
@@ -285,7 +286,7 @@ export default class CircleManager {
         this.fretboard.showScale(this.currentScaleNotes);
         
         // UI Display
-        this.elements.sig.innerHTML = `<span style="color:var(--primary)">Signature:</span> ${sigText} <br> <span style="color:var(--text-muted); font-size:0.75rem;">Formula: ${intervals.map(i => formulaMap[i % 12] || i).join(' ')}</span>`;
+        this.elements.sig.innerHTML = `<span class="sig-label">Signature:</span> ${sigText} <br> <span class="sig-formula">Formula: ${intervals.map(i => formulaMap[i % 12] || i).join(' ')}</span>`;
 
         this.elements.diatonic.innerHTML = intervals.map((interval, index) => {
             const chordRootName = AppConfig.NOTE_NAMES[(rootIdx + interval) % 12];
@@ -368,16 +369,16 @@ export default class CircleManager {
             { name: "D", min: anchorFret + 8, max: anchorFret + 12 }
         ];
 
-        let html = `<button class="secondary-btn small-btn sample-btn active-box" style="background:var(--primary); color:#000; font-weight:900;" onclick="window.AhordianApp.circleManager.filterByRange(null, null)">HIGHLIGHT ALL</button>`;
+        let html = `<button class="secondary-btn small-btn sample-btn active-box filter-all" onclick="window.AhordianApp.circleManager.filterByRange(null, null)">HIGHLIGHT ALL</button>`;
         patterns.forEach(p => {
             const min = Math.max(0, p.min);
             const max = p.max;
-            html += `<button class="secondary-btn small-btn sample-btn" onclick="window.AhordianApp.circleManager.filterByRange(${min}, ${max})"><strong>${p.name}</strong><br><span style="font-size:0.6rem; opacity:0.8">Fr ${min}-${max}</span></button>`;
+            html += `<button class="secondary-btn small-btn sample-btn" onclick="window.AhordianApp.circleManager.filterByRange(${min}, ${max})"><strong>${p.name}</strong><br><span class="filter-range">Fr ${min}-${max}</span></button>`;
         });
 
         [1, 2, 3, 4, 5].forEach(p => {
             const start = anchorFret + (p-1)*2;
-            html += `<button class="secondary-btn small-btn sample-btn" style="opacity:0.9" onclick="window.AhordianApp.circleManager.filterByRange(${start}, ${start+4})"><strong>P${p}</strong><br><span style="font-size:0.6rem; opacity:0.8">Fr ${start}-${start+4}</span></button>`;
+            html += `<button class="secondary-btn small-btn sample-btn filter-pos" onclick="window.AhordianApp.circleManager.filterByRange(${start}, ${start+4})"><strong>P${p}</strong><br><span class="filter-range">Fr ${start}-${start+4}</span></button>`;
         });
         this.elements.positionFilters.innerHTML = html;
         

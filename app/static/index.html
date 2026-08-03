@@ -12,6 +12,8 @@
 </head>
 
 <body class="dark-mode">
+    <!-- Icons are declared as `data-icon="name"` and filled in by hydrateIcons()
+         from js/Icons.js. Never inline SVG markup here. -->
     <div class="app-layout">
         <!-- SIDEBAR NAVIGATION -->
         <aside class="sidebar">
@@ -19,43 +21,43 @@
                 <img src="./logo.png" alt="Ahordian Acoustic Logo">
                 <h1>Ahordian</h1>
             </div>
-            
+
             <nav class="sidebar-nav">
                 <span class="nav-section-title">Dashboard</span>
-                <button class="nav-btn active" data-target="home-screen"> Home</button>
-                
+                <button class="nav-btn active" data-target="home-screen">Home</button>
+
                 <span class="nav-section-title">Core Tools</span>
-                <button class="nav-btn" data-target="detector-screen"> Tuner & Detector</button>
-                <button class="nav-btn" data-target="tools-screen"> Guitar Tools Hub</button>
-                
+                <button class="nav-btn" data-target="detector-screen">Tuner &amp; Detector</button>
+                <button class="nav-btn" data-target="tools-screen">Guitar Tools Hub</button>
+
                 <span class="nav-section-title">Explorers</span>
-                <button class="nav-btn" data-target="chord-explorer-screen"> Chord Explorer</button>
-                <button class="nav-btn" data-target="scale-explorer-screen"> Scale Explorer</button>
-                <button class="nav-btn" data-target="fretboard-screen"> Interactive Fretboard</button>
-                <button class="nav-btn" data-target="circle-screen"> Circle of Fifths</button>
-                
+                <button class="nav-btn" data-target="chord-explorer-screen">Chord Explorer</button>
+                <button class="nav-btn" data-target="scale-explorer-screen">Scale Explorer</button>
+                <button class="nav-btn" data-target="fretboard-screen">Interactive Fretboard</button>
+                <button class="nav-btn" data-target="circle-screen">Circle of Fifths</button>
+
                 <span class="nav-section-title">Training</span>
-                <button class="nav-btn" data-target="ear-training-screen"> Ear Training</button>
-                <button class="nav-btn" data-target="practice-screen"> Practice Generator</button>
-                
-                <span class="nav-section-title">Content & Songs</span>
-                <button class="nav-btn" data-target="lessons-screen"> Guitar Curriculum</button>
-                <button class="nav-btn" data-target="tab-player-screen"> Tab Player & Songs</button>
-                <button class="nav-btn" data-target="guide-screen"> User Guide</button>
-                
+                <button class="nav-btn" data-target="ear-training-screen">Ear Training</button>
+                <button class="nav-btn" data-target="practice-screen">Practice Generator</button>
+
+                <span class="nav-section-title">Content &amp; Songs</span>
+                <button class="nav-btn" data-target="lessons-screen">Guitar Curriculum</button>
+                <button class="nav-btn" data-target="tab-player-screen">Tab Player &amp; Songs</button>
+                <button class="nav-btn" data-target="guide-screen">User Guide</button>
+
             </nav>
 
             <div class="sidebar-footer">
-                <button class="nav-btn" data-target="settings-screen"> Settings</button>
-                <div style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted); text-align: center;">
-                    <a href="#" onclick="window.location.href='mailto:' + 'shalin.rahman' + '@' + 'gmail.com'; return false;" style="color: var(--primary); text-decoration: none; opacity: 0.8;">Send Feedback</a>
+                <button class="nav-btn" data-target="settings-screen">Settings</button>
+                <div class="sidebar-feedback">
+                    <a href="#" onclick="window.location.href='mailto:' + 'shalin.rahman' + '@' + 'gmail.com'; return false;">Send Feedback</a>
                 </div>
             </div>
         </aside>
 
         <!-- MAIN CONTENT AREA -->
         <div class="main-content-area">
-            
+
             <!-- GLOBAL TOPBAR -->
             <header class="global-topbar">
                 <div class="metronome-control">
@@ -72,44 +74,44 @@
                         <option value="3">3/4</option>
                         <option value="6">6/8</option>
                     </select>
-                    <button id="metronome-toggle">⏵</button>
+                    <button id="metronome-toggle" class="icon-btn" title="Start / stop metronome"><span class="btn-ico-only" data-icon="play" data-icon-size="14"></span></button>
                 </div>
 
-                <!-- Sample Loading Indicator -->
-                <div id="sample-status-indicator" style="display:none; align-items:center; gap:5px; margin-left:10px; font-size:0.8rem; color:var(--text-muted);">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="spin-anim"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
-                    <span>Loading Audio...</span>
+                <!-- Sample Loading Indicator (shown by App.js while samples decode) -->
+                <div id="sample-status-indicator" class="sample-status">
+                    <span class="sample-status-ico" data-icon="loading" data-icon-size="14"></span>
+                    <span class="sample-status-text">Loading Audio...</span>
                 </div>
 
-                <!-- Now-Playing pill -->
-                <div id="now-playing-pill" class="now-playing-pill" style="display:none;">
+                <!-- Now-Playing pill (shown by App.js when a session is active) -->
+                <div id="now-playing-pill" class="now-playing-pill">
                     <span class="np-dot"></span>
                     <span id="now-playing-label">Playing</span>
-                    <button id="now-playing-goto" title="Go to playing screen">↗</button>
+                    <button id="now-playing-goto" title="Go to playing screen"><span class="btn-ico-only" data-icon="jump"></span></button>
                 </div>
 
                 <div class="topbar-right">
                     <!-- Master Volume -->
                     <div class="master-vol-control" title="Master Volume">
-                        <svg id="vol-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                        <span id="vol-icon" class="topbar-ico" data-icon="volume"></span>
                         <input type="range" id="master-volume" min="0" max="1" step="0.01" value="1">
                     </div>
                     <!-- Global Mute -->
                     <button id="global-mute-btn" class="icon-btn" title="Mute / Unmute all audio">
-                        <svg id="mute-icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                        <svg id="mute-icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                        <span id="mute-icon-on" class="btn-ico-only" data-icon="volume" data-icon-size="18"></span>
+                        <span id="mute-icon-off" class="btn-ico-only is-hidden" data-icon="volume-off" data-icon-size="18"></span>
                     </button>
                     <div class="status-badge" id="mic-status">Microphone Off</div>
                 </div>
             </header>
 
             <!-- SCREENS -->
-            
+
             <!-- HOME SCREEN -->
             <main class="screen active" id="home-screen">
                 <div class="dashboard-page">
                     <h2 class="page-title">Welcome Back!</h2>
-                    
+
                     <div class="dashboard-grid">
                         <!-- Quick Access -->
                         <div class="dash-card">
@@ -123,11 +125,11 @@
 
                         <!-- Random Practice Challenge -->
                         <div class="dash-card challenge-card">
-                            <h3>🎸 Daily Practice Challenge</h3>
+                            <h3><span class="title-ico" data-icon="guitar"></span>Daily Practice Challenge</h3>
                             <p id="daily-challenge-text">Loading...</p>
                             <button id="generate-challenge-btn" class="primary-btn small-btn">Generate New</button>
                         </div>
-                        
+
                         <!-- Recently Opened -->
                         <div class="dash-card">
                             <h3>Recently Opened</h3>
@@ -171,10 +173,10 @@
                         </section>
                         <section class="history-section">
                             <div class="history-header">
-                                <h3>Live Stream & History</h3>
+                                <h3>Live Stream &amp; History</h3>
                                 <div class="history-actions">
-                                    <button id="replay-history-btn" class="primary-btn small-btn" disabled>Replay (64 max)</button>
-                                    <button id="live-capture-btn" class="secondary-btn small-btn">🔴 Record to Tape: OFF</button>
+                                    <button id="replay-history-btn" class="primary-btn small-btn" disabled><span class="btn-ico" data-icon="play"></span>Replay (64 max)</button>
+                                    <button id="live-capture-btn" class="secondary-btn small-btn"><span class="btn-ico" data-icon="record"></span>Record to Tape: OFF</button>
                                     <button id="save-btn" class="secondary-btn small-btn">Save Log</button>
                                     <label for="file-input" class="secondary-btn small-btn file-label">Upload File</label>
                                     <input type="file" id="file-input" hidden accept="audio/*">
@@ -214,7 +216,7 @@
                             <label for="sa-symbols">Sargam Notation Map:</label>
                             <input type="text" id="sa-symbols" class="styled-input mono" value="S, S', R, R', G, M, M', P, P', D, D', N">
                         </div>
-                        <div id="drop-zone" class="drop-zone-module">Drag & Drop Audio File to Analyze Locally</div>
+                        <div id="drop-zone" class="drop-zone-module">Drag &amp; Drop Audio File to Analyze Locally</div>
                     </section>
                 </div>
             </main>
@@ -247,7 +249,7 @@
             <main class="screen" id="settings-screen">
                 <div class="settings-page">
                     <h2 class="page-title">Settings</h2>
-                    <div class="dash-card" style="max-width: 500px;">
+                    <div class="dash-card narrow-card">
 
                         <div class="settings-mini spacer-top">
                             <label>Handedness</label>
@@ -270,9 +272,9 @@
                 <div class="dashboard-page">
                     <h2 class="page-title">Chord Explorer</h2>
                     <div class="dashboard-grid">
-                        <div class="dash-card" style="flex: 1;">
+                        <div class="dash-card">
                             <h3>Search Chords</h3>
-                            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <div class="row spacer-bottom-lg">
                                 <div class="settings-mini">
                                     <label>Root Note</label>
                                     <select id="chord-exp-root" class="styled-input pointer">
@@ -285,12 +287,12 @@
                                         <option value="major">Major</option><option value="minor">Minor</option><option value="7">Dominant 7</option><option value="maj7">Major 7</option><option value="m7">Minor 7</option><option value="sus2">Sus2</option><option value="sus4">Sus4</option><option value="dim">Diminished</option><option value="aug">Augmented</option>
                                     </select>
                                 </div>
-                                <div class="settings-mini" style="align-self: flex-end;">
+                                <div class="settings-mini">
                                     <button id="chord-exp-search-btn" class="primary-btn">View Chord</button>
                                 </div>
                             </div>
-                            
-                            <div class="theory-panel" style="margin-top: 20px;">
+
+                            <div class="theory-panel spacer-lg">
                                 <div class="theory-header"><span id="chord-exp-title">C Major</span></div>
                                 <div class="theory-content">
                                     <div class="theory-block"><span class="theory-label">Formula</span><div id="chord-exp-formula" class="theory-value">1 - 3 - 5</div></div>
@@ -299,15 +301,15 @@
                             </div>
                         </div>
 
-                        <div class="dash-card" style="flex: 2;">
-                            <h3>Voicings & Inversions</h3>
-                            <div id="chord-exp-voicings" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px;">
+                        <div class="dash-card wide">
+                            <h3>Voicings &amp; Inversions</h3>
+                            <div id="chord-exp-voicings" class="row row-lg spacer-bottom-lg">
                                 <!-- Dynamically generated voicing buttons go here -->
                                 <span class="empty-state">Select a chord to view voicings.</span>
                             </div>
                             <div id="chord-exp-fretboard" class="fretboard-svg-container"></div>
-                            <div style="margin-top: 15px;">
-                                <button id="chord-exp-play-btn" class="primary-btn small-btn" disabled>▶ Play Chord</button>
+                            <div class="spacer-md">
+                                <button id="chord-exp-play-btn" class="primary-btn small-btn" disabled><span class="btn-ico" data-icon="play"></span>Play Chord</button>
                             </div>
                         </div>
                     </div>
@@ -318,9 +320,9 @@
             <main class="screen" id="scale-explorer-screen">
                 <div class="dashboard-page">
                     <h2 class="page-title">Scale Explorer</h2>
-                    
-                    <div class="fb-topbar-controls" style="margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid var(--glass-border);">
-                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+
+                    <div class="fb-topbar-controls control-well spacer-bottom-lg">
+                        <div class="row row-lg">
                             <div class="settings-mini">
                                 <label>Root Note</label>
                                 <select id="scale-exp-root" class="styled-input pointer">
@@ -345,14 +347,14 @@
                                     <option value="Blues">Blues</option>
                                 </select>
                             </div>
-                            <div style="display: flex; gap: 10px;">
+                            <div class="row row-sm">
                                 <label class="checkbox-label compact"><input type="checkbox" id="scale-exp-intervals"> Show Intervals</label>
                                 <button id="scale-exp-view-btn" class="primary-btn">View Scale</button>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="theory-panel" style="margin-bottom: 20px;">
+
+                    <div class="theory-panel spacer-bottom-lg">
                         <div class="theory-header"><span id="scale-exp-title">C Major</span></div>
                         <div class="theory-content">
                             <div class="theory-block"><span class="theory-label">Formula</span><div id="scale-exp-formula" class="theory-value">1 - 2 - 3 - 4 - 5 - 6 - 7</div></div>
@@ -363,8 +365,8 @@
 
                     <div class="dash-card">
                         <div id="scale-exp-fretboard" class="fretboard-svg-container"></div>
-                        <div style="margin-top: 15px; display: flex; gap: 10px;">
-                            <button id="scale-exp-play-btn" class="primary-btn small-btn" disabled>▶ Play Scale</button>
+                        <div class="row spacer-md">
+                            <button id="scale-exp-play-btn" class="primary-btn small-btn" disabled><span class="btn-ico" data-icon="play"></span>Play Scale</button>
                         </div>
                     </div>
                 </div>
@@ -375,17 +377,17 @@
                 <div class="fb-page">
                     <div class="fb-topbar">
                         <div class="fb-topbar-controls">
-                            <div style="display: flex; gap: 4px; align-items: center;">
+                            <div class="row row-sm row-center">
                                 <select id="tuning-select" class="styled-input pointer fb-select"></select>
-                                <input type="text" id="custom-tuning-input" placeholder="E2-A2-D3-G3-B3-E4" class="styled-input fb-select" style="width: 120px; font-size: 0.7rem; display: none;">
-                                <button id="toggle-custom-tuning" class="secondary-btn small-btn" style="min-width: 30px; padding: 4px;" title="Custom Tuning">✎</button>
+                                <input type="text" id="custom-tuning-input" placeholder="E2-A2-D3-G3-B3-E4" class="styled-input fb-select custom-tuning-input">
+                                <button id="toggle-custom-tuning" class="secondary-btn small-btn icon-only-btn" title="Custom Tuning"><span class="btn-ico-only" data-icon="edit"></span></button>
                             </div>
                             <label class="checkbox-label compact"><input type="checkbox" id="display-intervals-toggle"> Intervals</label>
                             <label class="checkbox-label compact"><input type="checkbox" id="toggle-overlay"> Overlay</label>
                             <button id="clear-overlay-btn" class="secondary-btn small-btn">Clear</button>
                             <!-- Replay is launched from the Detector screen but plays out here, so the
                                  cancel affordance has to live on this screen too. Shown only while replaying. -->
-                            <button id="fb-stop-replay-btn" class="secondary-btn small-btn" style="display: none;">■ Stop Replay</button>
+                            <button id="fb-stop-replay-btn" class="secondary-btn small-btn is-hidden"><span class="btn-ico" data-icon="stop"></span>Stop Replay</button>
                         </div>
                     </div>
 
@@ -400,7 +402,7 @@
                     </div>
 
                     <!-- Music Theory Module -->
-                    <div id="music-theory-panel" class="theory-panel" style="display: none;">
+                    <div id="music-theory-panel" class="theory-panel is-hidden">
                         <div class="theory-header"><span id="theory-title">Music Theory</span></div>
                         <div class="theory-content">
                             <div class="theory-block"><span class="theory-label">Scale Formula</span><div id="theory-formula" class="theory-value">--</div></div>
@@ -411,20 +413,20 @@
 
                     <!-- Scale + Pattern Buttons -->
                     <div class="fb-buttons-row">
-                        <div class="fb-btn-group"><span class="fb-btn-label">Scales & Raags</span><div id="scale-buttons" class="button-grid"></div></div>
+                        <div class="fb-btn-group"><span class="fb-btn-label">Scales &amp; Raags</span><div id="scale-buttons" class="button-grid"></div></div>
                         <div class="fb-btn-group"><span class="fb-btn-label">Bengali Patterns</span><div id="pattern-buttons" class="button-grid"></div></div>
                         <div class="fb-btn-group"><span class="fb-btn-label">CAGED / TNPS Boxes</span><div id="fb-position-filters" class="button-grid"></div></div>
                     </div>
 
                     <!-- Tape + History -->
                     <div class="fb-bottom-row">
-                        <div class="fb-tape-wrap" style="display: flex; flex-direction: column; gap: 4px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="fb-btn-label" style="margin:0;">Transcript</span>
-                                <div style="display: flex; gap: 4px;">
-                                    <button id="play-tape-btn" class="primary-btn small-btn">▶ Play</button>
-                                    <button id="export-tape-btn" class="secondary-btn small-btn">💾 Export</button>
-                                    <button id="clear-tape-btn" class="secondary-btn small-btn">🗑 Clear</button>
+                        <div class="fb-tape-wrap">
+                            <div class="row-split">
+                                <span class="fb-btn-label flush">Transcript</span>
+                                <div class="row row-sm row-nowrap">
+                                    <button id="play-tape-btn" class="primary-btn small-btn"><span class="btn-ico" data-icon="play"></span>Play</button>
+                                    <button id="export-tape-btn" class="secondary-btn small-btn"><span class="btn-ico" data-icon="download"></span>Export</button>
+                                    <button id="clear-tape-btn" class="secondary-btn small-btn"><span class="btn-ico" data-icon="trash"></span>Clear</button>
                                 </div>
                             </div>
                             <div id="sequence-tape" class="note-tape"></div>
@@ -435,51 +437,61 @@
                         </div>
                     </div>
 
-                    <!-- Jam Station -->
-                    <div class="fb-jam-station" style="margin-top: 10px; padding: 12px; background: rgba(30, 0, 50, 0.4); border: 1px solid var(--primary); border-radius: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span id="jam-station-title" style="color: var(--primary); font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">Jam Station: Virtual Band</span>
-                            <div id="live-chord-indicator" style="background: rgba(255,215,0,0.2); padding: 4px 12px; border-radius: 20px; color: #fff; font-weight: bold; font-size: 1.2rem; display: none;">--</div>
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
-                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                                <label>Backing Track Progression</label>
+                    <!-- ===== JAM STATION =====
+                         Deliberately set apart from the fretboard workspace above: it is a
+                         separate instrument, not another fretboard control. -->
+                    <section class="jam-station" aria-labelledby="jam-station-title">
+                        <header class="jam-header">
+                            <div class="jam-brand">
+                                <span class="jam-brand-ico" data-icon="drum" data-icon-size="26"></span>
+                                <span class="jam-brand-text">
+                                    <span class="jam-title" id="jam-station-title">Jam Station</span>
+                                    <span class="jam-subtitle">Virtual Band</span>
+                                </span>
+                            </div>
+                            <div id="live-chord-indicator" class="jam-chord">--</div>
+                        </header>
+
+                        <div class="jam-controls">
+                            <div class="settings-mini fill">
+                                <label for="jam-progression">Backing Track Progression</label>
                                 <select id="jam-progression" class="styled-input pointer">
                                     <option value="blues_12_bar">12-Bar Blues</option><option value="pop_1564">Pop Ballad (I-V-vi-IV)</option><option value="jazz_251">Jazz ii-V-I</option>
                                 </select>
                             </div>
-                            <div class="settings-mini" style="width: 80px;">
-                                <label>Key</label>
+                            <div class="settings-mini jam-key-field">
+                                <label for="jam-key">Key</label>
                                 <select id="jam-key" class="styled-input pointer">
                                     <option value="C">C</option><option value="G">G</option><option value="D">D</option><option value="A" selected>A</option><option value="E">E</option>
                                 </select>
                             </div>
-                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                                <label>Dynamic Soloing Guide</label>
+                            <div class="settings-mini fill">
+                                <label for="jam-solo-mode">Dynamic Soloing Guide</label>
                                 <select id="jam-solo-mode" class="styled-input pointer">
                                     <option value="none">Off</option><option value="triads">Highlight Chord Triads</option><option value="pentatonic" selected>Pentatonic Scales</option><option value="blues">Blues Scales</option>
                                 </select>
                             </div>
-                            <div style="display: flex; gap: 5px;">
-                                <button id="jam-play-btn" class="primary-btn" style="width: 100px;">Play</button>
-                                <button id="jam-stop-btn" class="secondary-btn" style="width: 100px;" disabled>Stop</button>
+                            <div class="jam-transport">
+                                <button id="jam-play-btn" class="primary-btn jam-btn"><span class="btn-ico" data-icon="play"></span>Play</button>
+                                <button id="jam-stop-btn" class="secondary-btn jam-btn" disabled><span class="btn-ico" data-icon="stop"></span>Stop</button>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-top: 15px; border-top: 1px solid rgba(255,215,0,0.2); padding-top: 15px;">
-                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                                <label style="display:flex; justify-content:space-between;"><span>Tempo</span> <span id="jam-bpm-label" style="color:var(--primary); font-weight:bold;">120 BPM</span></label>
-                                <input type="range" id="jam-bpm" min="40" max="250" value="120" style="width: 100%; accent-color: var(--primary);">
+
+                        <div class="jam-mixer">
+                            <div class="settings-mini">
+                                <label class="jam-slider-label" for="jam-bpm"><span>Tempo</span><span id="jam-bpm-label" class="jam-slider-value">120 BPM</span></label>
+                                <input type="range" id="jam-bpm" min="40" max="250" value="120">
                             </div>
-                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                                <label>Guitar Volume</label>
-                                <input type="range" id="jam-guitar-vol" min="0" max="1" step="0.05" value="1" style="width: 100%; accent-color: var(--primary);">
+                            <div class="settings-mini">
+                                <label for="jam-guitar-vol">Guitar Volume</label>
+                                <input type="range" id="jam-guitar-vol" min="0" max="1" step="0.05" value="1">
                             </div>
-                            <div class="settings-mini" style="flex: 1; min-width: 150px;">
-                                <label>Drums Volume</label>
-                                <input type="range" id="jam-drums-vol" min="0" max="1" step="0.05" value="0.8" style="width: 100%; accent-color: var(--primary);">
+                            <div class="settings-mini">
+                                <label for="jam-drums-vol">Drums Volume</label>
+                                <input type="range" id="jam-drums-vol" min="0" max="1" step="0.05" value="0.8">
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </main>
 
@@ -489,29 +501,29 @@
                     <div class="fb-topbar">
                         <div class="fb-title"><h2>Circle of Fifths</h2></div>
                     </div>
-                    <div class="circle-content-row" style="display: flex; flex-direction: row; gap: 40px; align-items: flex-start; justify-content: center; width: 100%; flex-wrap: wrap;">
-                        <div class="circle-container" id="circle-container" style="flex: 1; min-width: 300px; max-width: 500px;"></div>
-                        <div class="circle-info-panel" id="circle-info-panel" style="flex: 1; min-width: 300px; max-width: 600px; background: var(--glass-bg); padding: 20px; border-radius: 12px;">
+                    <div class="circle-content-row">
+                        <div class="circle-container" id="circle-container"></div>
+                        <div class="circle-info-panel" id="circle-info-panel">
                             <h3 id="cof-key-title">Select a Key</h3>
-                            <div class="settings-mini" style="margin-bottom: 20px;">
+                            <div class="settings-mini spacer-bottom-lg">
                                 <label for="cof-scale-select">Practice Scale:</label>
                                 <select id="cof-scale-select" class="styled-input pointer"></select>
                             </div>
-                            <p id="cof-scale-notes" style="font-family: 'Outfit'; font-weight: 800; font-size: 1.2rem; color: var(--text-main); letter-spacing: 2px; margin: 10px 0 5px 0;">--</p>
-                            <p id="cof-key-sig" style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-muted);">--</p>
+                            <p id="cof-scale-notes" class="cof-notes">--</p>
+                            <p id="cof-key-sig" class="cof-key-sig">--</p>
                             <p id="cof-relative-minor">--</p>
-                            <div style="margin-bottom: 12px;">
+                            <div class="spacer-bottom-md">
                                 <span class="fb-btn-label">Diatonic Triads</span>
-                                <div id="cof-diatonic-chords" class="button-grid" style="margin-top: 4px;"></div>
+                                <div id="cof-diatonic-chords" class="button-grid spacer-sm"></div>
                             </div>
-                            <div id="cof-positions-section" style="margin-bottom: 20px;">
+                            <div id="cof-positions-section" class="spacer-bottom-lg">
                                 <span class="fb-btn-label">Interactive Scale Boxes (CAGED / TNPS)</span>
-                                <div id="cof-position-filters" class="button-grid" style="margin-top: 4px;"></div>
+                                <div id="cof-position-filters" class="button-grid spacer-sm"></div>
                             </div>
                             <div class="cof-actions">
-                                <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;"><input type="checkbox" id="cof-intervals-toggle"> Intervals instead of notes</label>
-                                <label class="checkbox-label compact" style="justify-content: center; margin-bottom: 4px;"><input type="checkbox" id="cof-show-voicings"> Open Chords</label>
-                                <button id="cof-play-scale" class="primary-btn small-btn" disabled>Play Audio Sequence</button>
+                                <label class="checkbox-label compact centered"><input type="checkbox" id="cof-intervals-toggle"> Intervals instead of notes</label>
+                                <label class="checkbox-label compact centered"><input type="checkbox" id="cof-show-voicings"> Open Chords</label>
+                                <button id="cof-play-scale" class="primary-btn small-btn" disabled><span class="btn-ico" data-icon="play"></span>Play Audio Sequence</button>
                             </div>
                         </div>
                     </div>
@@ -521,31 +533,31 @@
             <!-- EAR TRAINING SCREEN -->
             <main class="screen" id="ear-training-screen">
                 <div class="dashboard-page">
-                    <h2 class="page-title">👂 Ear Training Room</h2>
-                    <div class="dashboard-grid" style="align-items: flex-start;">
+                    <h2 class="page-title"><span class="title-ico" data-icon="ear"></span>Ear Training Room</h2>
+                    <div class="dashboard-grid grid-top">
 
                         <!-- Left: Controls & Stats -->
-                        <div class="dash-card" style="flex: 1; min-width: 260px;">
+                        <div class="dash-card">
                             <h3>Setup</h3>
                             <div class="settings-mini spacer-top">
-                                <label>Training Mode</label>
+                                <label for="ear-mode-selector">Training Mode</label>
                                 <select id="ear-mode-selector" class="styled-input pointer">
                                     <option value="intervals">Interval Recognition</option>
                                     <option value="chords">Chord Quality</option>
                                     <option value="notes">Note Recognition</option>
                                 </select>
                             </div>
-                            <div style="display: flex; gap: 8px; margin-top: 16px;">
-                                <button id="ear-start-btn" class="primary-btn" style="flex:1;">&#9658; Start</button>
-                                <button id="ear-stop-btn" class="secondary-btn" style="flex:1;" disabled>&#9632; Stop</button>
+                            <div class="row row-nowrap row-sm spacer-md">
+                                <button id="ear-start-btn" class="primary-btn fill-even"><span class="btn-ico" data-icon="play"></span>Start</button>
+                                <button id="ear-stop-btn" class="secondary-btn fill-even" disabled><span class="btn-ico" data-icon="stop"></span>Stop</button>
                             </div>
-                            <button id="ear-play-btn" class="secondary-btn" style="width:100%; margin-top: 8px;" disabled>&#128266; Replay Sound</button>
+                            <button id="ear-play-btn" class="secondary-btn w-full spacer-sm" disabled><span class="btn-ico" data-icon="volume"></span>Replay Sound</button>
 
-                            <div style="margin-top: 24px; border-top: 1px solid var(--glass-border); padding-top: 16px;">
+                            <div class="divider-top">
                                 <h3>Session Stats</h3>
-                                <div class="theory-content" style="margin-top: 8px;">
-                                    <div class="theory-block"><span class="theory-label">Score</span><div id="ear-score" class="theory-value" style="font-size:1.8rem; font-weight:900; color:var(--primary);">0</div></div>
-                                    <div class="theory-block"><span class="theory-label">Streak</span><div id="ear-streak" class="theory-value" style="font-size:1.4rem;">0</div></div>
+                                <div class="theory-content spacer-sm">
+                                    <div class="theory-block"><span class="theory-label">Score</span><div id="ear-score" class="theory-value stat-xl">0</div></div>
+                                    <div class="theory-block"><span class="theory-label">Streak</span><div id="ear-streak" class="theory-value stat-lg">0</div></div>
                                     <div class="theory-block"><span class="theory-label">Accuracy</span><div id="ear-accuracy" class="theory-value">0%</div></div>
                                     <div class="theory-block"><span class="theory-label">Best Streak</span><div id="ear-best-streak" class="theory-value">0</div></div>
                                 </div>
@@ -553,10 +565,10 @@
                         </div>
 
                         <!-- Right: Quiz Area -->
-                        <div class="dash-card" style="flex: 2; min-width: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px;">
-                            <p id="ear-question" style="font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin-bottom: 24px; text-align: center;">Press Start to begin!</p>
-                            <div id="ear-choices" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 500px;"></div>
-                            <p id="ear-feedback" class="ear-feedback" style="margin-top: 20px; font-size: 1.1rem; font-weight: 700; min-height: 28px;"></p>
+                        <div class="dash-card wide quiz-card">
+                            <p id="ear-question" class="quiz-question">Press Start to begin!</p>
+                            <div id="ear-choices" class="quiz-choices"></div>
+                            <p id="ear-feedback" class="ear-feedback"></p>
                         </div>
 
                     </div>
@@ -566,29 +578,29 @@
             <!-- PRACTICE GENERATOR SCREEN -->
             <main class="screen" id="practice-screen">
                 <div class="dashboard-page">
-                    <h2 class="page-title">💪 Practice Generator</h2>
-                    <div class="dashboard-grid" style="align-items: flex-start;">
+                    <h2 class="page-title"><span class="title-ico" data-icon="dumbbell"></span>Practice Generator</h2>
+                    <div class="dashboard-grid grid-top">
 
                         <!-- Config Card -->
-                        <div class="dash-card" style="flex: 1; min-width: 260px;">
+                        <div class="dash-card">
                             <h3>Configure Routine</h3>
                             <div class="settings-mini spacer-top">
-                                <label>Focus Area</label>
+                                <label for="prac-focus">Focus Area</label>
                                 <select id="prac-focus" class="styled-input pointer">
                                     <option value="technique">Technique (Picking / Legato)</option>
                                     <option value="scales">Scales &amp; Modes</option>
                                     <option value="chords">Chord Changes</option>
                                     <option value="rhythm">Rhythm &amp; Strumming</option>
                                     <option value="theory">Theory Application</option>
-                                    <option value="random">🎲 Surprise Me!</option>
+                                    <option value="random">Surprise Me!</option>
                                 </select>
                             </div>
                             <div class="settings-mini spacer-top">
-                                <label>Target BPM: <span id="prac-bpm-label" style="color:var(--primary); font-weight:700;">80 BPM</span></label>
-                                <input type="range" id="prac-bpm" min="40" max="200" value="80" style="width:100%;">
+                                <label for="prac-bpm">Target BPM: <span id="prac-bpm-label" class="inline-value">80 BPM</span></label>
+                                <input type="range" id="prac-bpm" min="40" max="200" value="80">
                             </div>
                             <div class="settings-mini spacer-top">
-                                <label>Duration</label>
+                                <label for="prac-duration">Duration</label>
                                 <select id="prac-duration" class="styled-input pointer">
                                     <option value="5">5 minutes</option>
                                     <option value="10" selected>10 minutes</option>
@@ -597,22 +609,22 @@
                                     <option value="30">30 minutes</option>
                                 </select>
                             </div>
-                            <button id="prac-generate-btn" class="primary-btn" style="width:100%; margin-top:16px;">✨ Generate Routine</button>
-                            <button id="prac-tap-btn" class="secondary-btn" style="width:100%; margin-top:8px;">👆 Tap Tempo</button>
+                            <button id="prac-generate-btn" class="primary-btn w-full spacer-md"><span class="btn-ico" data-icon="sparkle"></span>Generate Routine</button>
+                            <button id="prac-tap-btn" class="secondary-btn w-full spacer-sm"><span class="btn-ico" data-icon="tap"></span>Tap Tempo</button>
                         </div>
 
                         <!-- Routine Output -->
-                        <div class="dash-card" style="flex: 2; min-width: 300px;">
+                        <div class="dash-card wide">
                             <h3>Today's Practice Routine</h3>
-                            <div id="prac-routine-output" style="margin-top: 12px;">
-                                <p style="color:var(--text-muted); text-align:center; padding: 40px 0;">Configure your session on the left and press Generate.</p>
+                            <div id="prac-routine-output" class="spacer-md">
+                                <p class="hint">Configure your session on the left and press Generate.</p>
                             </div>
                         </div>
 
                         <!-- High Scores -->
-                        <div class="dash-card" style="flex: 1; min-width: 200px;">
-                            <h3>🏆 High Scores</h3>
-                            <div id="prac-high-scores" style="margin-top: 12px;">
+                        <div class="dash-card">
+                            <h3><span class="title-ico" data-icon="trophy"></span>High Scores</h3>
+                            <div id="prac-high-scores" class="spacer-md">
                                 <div class="theory-content">
                                     <div class="theory-block"><span class="theory-label">Intervals</span><div id="hs-intervals" class="theory-value">0</div></div>
                                     <div class="theory-block"><span class="theory-label">Chords</span><div id="hs-chords" class="theory-value">0</div></div>
@@ -629,34 +641,34 @@
             <!-- LESSONS SCREEN -->
             <main class="screen" id="lessons-screen">
                 <div class="dashboard-page">
-                    <h2 class="page-title">📚 Guitar Curriculum & Lessons</h2>
-                    <div class="dashboard-grid" style="align-items: flex-start;">
+                    <h2 class="page-title"><span class="title-ico" data-icon="book"></span>Guitar Curriculum &amp; Lessons</h2>
+                    <div class="dashboard-grid grid-top">
                         <!-- Lesson List -->
-                        <div class="dash-card" style="flex: 1; min-width: 280px;">
+                        <div class="dash-card">
                             <h3>Modules</h3>
-                            <div id="lesson-list" style="margin-top: 12px;"></div>
+                            <div id="lesson-list" class="spacer-md"></div>
                         </div>
 
                         <!-- Step Viewer -->
-                        <div class="dash-card" style="flex: 2; min-width: 320px; display:flex; flex-direction:column; justify-content:space-between; min-height: 380px;">
+                        <div class="dash-card wide lesson-viewer">
                             <div>
-                                <h3 id="lesson-title" style="color:var(--primary); font-size:1.4rem;">Select a Lesson</h3>
-                                <p id="lesson-desc" style="color:var(--text-muted); font-size:0.9rem; margin-top:4px; margin-bottom: 20px;"></p>
+                                <h3 id="lesson-title" class="lesson-title">Select a Lesson</h3>
+                                <p id="lesson-desc" class="lesson-desc"></p>
 
-                                <div class="theory-panel" style="padding: 16px;">
+                                <div class="theory-panel lesson-step-panel">
                                     <div class="theory-header"><span id="lesson-step-title">Step Title</span></div>
-                                    <div id="lesson-step-content" style="padding-top: 12px; font-size: 1rem; line-height: 1.6; color: var(--text-main);">Step Content goes here...</div>
+                                    <div id="lesson-step-content" class="lesson-step-content">Step Content goes here...</div>
                                 </div>
                             </div>
 
-                            <div style="margin-top: 20px; display:flex; flex-direction:column; gap:10px;">
-                                <button id="lesson-step-action-btn" class="primary-btn" style="width:100%;">▶ Try Step</button>
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <button id="lesson-prev-btn" class="secondary-btn small-btn">◀ Previous</button>
-                                    <span id="lesson-progress-text" style="font-size:0.85rem; color:var(--text-muted);">Step 1 of 3</span>
-                                    <button id="lesson-next-btn" class="secondary-btn small-btn">Next ▶</button>
+                            <div class="lesson-nav">
+                                <button id="lesson-step-action-btn" class="primary-btn w-full"><span class="btn-ico" data-icon="play"></span>Try Step</button>
+                                <div class="row-split">
+                                    <button id="lesson-prev-btn" class="secondary-btn small-btn"><span class="btn-ico" data-icon="prev"></span>Previous</button>
+                                    <span id="lesson-progress-text" class="text-muted-sm">Step 1 of 3</span>
+                                    <button id="lesson-next-btn" class="secondary-btn small-btn">Next<span class="btn-ico-end" data-icon="next"></span></button>
                                 </div>
-                                <button id="lesson-complete-btn" class="secondary-btn small-btn" style="align-self:center; margin-top:5px; border-color:var(--primary); color:var(--primary);">Mark as Complete</button>
+                                <button id="lesson-complete-btn" class="secondary-btn small-btn lesson-complete-btn">Mark as Complete</button>
                             </div>
                         </div>
                     </div>
@@ -666,20 +678,20 @@
             <!-- TAB PLAYER SCREEN -->
             <main class="screen" id="tab-player-screen">
                 <div class="dashboard-page">
-                    <h2 class="page-title">🎼 Interactive Tab Player</h2>
-                    <div class="dashboard-grid" style="align-items: flex-start;">
+                    <h2 class="page-title"><span class="title-ico" data-icon="sheet"></span>Interactive Tab Player</h2>
+                    <div class="dashboard-grid grid-top">
                         <!-- Controls & Select -->
-                        <div class="dash-card" style="flex: 1; min-width: 260px;">
+                        <div class="dash-card">
                             <h3>Song Selection</h3>
                             <div class="settings-mini spacer-top">
-                                <label>Song</label>
+                                <label for="tab-song-select">Song</label>
                                 <select id="tab-song-select" class="styled-input pointer"></select>
                             </div>
 
-                            <div style="margin-top: 20px; border-top: 1px solid var(--glass-border); padding-top: 16px;">
+                            <div class="divider-top">
                                 <h3>Playback Controls</h3>
                                 <div class="settings-mini spacer-top">
-                                    <label>Playback Speed</label>
+                                    <label for="tab-speed-select">Playback Speed</label>
                                     <select id="tab-speed-select" class="styled-input pointer">
                                         <option value="0.5">50% Speed (Slow)</option>
                                         <option value="0.75">75% Speed</option>
@@ -687,19 +699,19 @@
                                         <option value="1.25">125% Speed (Fast)</option>
                                     </select>
                                 </div>
-                                <div style="display:flex; gap:8px; margin-top:16px;">
-                                    <button id="tab-play-btn" class="primary-btn" style="flex:1;">▶ Play Tab</button>
-                                    <button id="tab-stop-btn" class="secondary-btn" style="flex:1;" disabled>■ Stop</button>
+                                <div class="row row-nowrap row-sm spacer-md">
+                                    <button id="tab-play-btn" class="primary-btn fill-even"><span class="btn-ico" data-icon="play"></span>Play Tab</button>
+                                    <button id="tab-stop-btn" class="secondary-btn fill-even" disabled><span class="btn-ico" data-icon="stop"></span>Stop</button>
                                 </div>
-                                <button id="tab-loop-btn" class="secondary-btn" style="width:100%; margin-top:8px;">🔁 Loop: OFF</button>
+                                <button id="tab-loop-btn" class="secondary-btn w-full spacer-sm"><span class="btn-ico" data-icon="loop"></span>Loop: OFF</button>
                             </div>
                         </div>
 
                         <!-- Tab Display -->
-                        <div class="dash-card" style="flex: 2.5; min-width: 320px;">
-                            <h3 id="tab-song-title" style="color:var(--primary);">Select a Song</h3>
-                            <p id="tab-song-artist" style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;"></p>
-                            <div id="tab-display" style="background: rgba(0,0,0,0.6); padding: 16px; border-radius: 8px; border: 1px solid var(--glass-border); overflow-x: auto;"></div>
+                        <div class="dash-card wide">
+                            <h3 id="tab-song-title" class="accent-title">Select a Song</h3>
+                            <p id="tab-song-artist" class="text-muted-sm spacer-bottom-md"></p>
+                            <div id="tab-display" class="tab-display"></div>
                         </div>
                     </div>
                 </div>
@@ -709,28 +721,28 @@
             <main class="screen" id="guide-screen">
                 <div class="guide-page">
                     <div class="guide-intro">
-                        <h2>📖 Ahordian User Guide</h2>
+                        <h2><span class="title-ico" data-icon="book"></span>Ahordian User Guide</h2>
                         <p>Everything you need to get started and master Ahordian Acoustic Guitar Suite.</p>
                     </div>
 
                     <div class="guide-section open">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>🚀 Getting Started</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="rocket"></span>Getting Started</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <p><strong>Ahordian</strong> runs entirely in your browser. Audio is processed locally via the Web Audio API — no plugins needed.</p>
                             <ul>
-                                <li>Click <strong>Start Detection</strong> on the Tuner & Detector screen and allow microphone access.</li>
+                                <li>Click <strong>Start Detection</strong> on the Tuner &amp; Detector screen and allow microphone access.</li>
                                 <li>Play a note on your guitar — pitch is detected in real time using autocorrelation (YIN-style).</li>
                                 <li>Use the <strong>topbar volume slider &amp; mute button</strong> to control all audio at any time.</li>
                             </ul>
-                            <p>💡 Best results: quiet room, mic 15–30 cm from soundhole.</p>
+                            <p class="guide-tip"><span class="btn-ico" data-icon="bulb"></span>Best results: quiet room, mic 15–30 cm from soundhole.</p>
                         </div>
                     </div>
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>🎙️ Tuner & Detector</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="mic"></span>Tuner &amp; Detector</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <ul>
@@ -745,7 +757,7 @@
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>🎸 Jam Station &amp; Virtual Band</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="drum"></span>Jam Station &amp; Virtual Band</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <p>Located on the <strong>Interactive Fretboard</strong> screen. Generates a full backing track in your browser.</p>
@@ -762,7 +774,7 @@
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>⏱️ Metronome</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="timer"></span>Metronome</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <ul>
@@ -775,7 +787,7 @@
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>🎵 Chord, Scale &amp; Circle Explorers</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="note"></span>Chord, Scale &amp; Circle Explorers</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <p><strong>Chord Explorer:</strong> Search by root + quality. Play any voicing to hear it.</p>
@@ -786,7 +798,7 @@
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>👂 Ear Training</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="ear"></span>Ear Training</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <ul>
@@ -798,21 +810,21 @@
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>🔊 Global Audio Controls</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="volume"></span>Global Audio Controls</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <ul>
                                 <li><strong>Master Volume</strong> — Controls final gain across all sources.</li>
                                 <li><strong>Mute</strong> — Silences all audio without stopping any engine. Click again to restore.</li>
-                                <li><strong>Now Playing pill</strong> — Appears when audio is active. Click ↗ to jump to that screen.</li>
+                                <li><strong>Now Playing pill</strong> — Appears when audio is active. Click the jump button to go to that screen.</li>
                             </ul>
-                            <p style="font-size:0.82rem; opacity:0.7;">Pipeline: Source → InstrumentGain → MasterGain → Compressor → Output</p>
+                            <p class="guide-note">Pipeline: Source → InstrumentGain → MasterGain → Compressor → Output</p>
                         </div>
                     </div>
 
                     <div class="guide-section">
                         <div class="guide-header" onclick="this.parentElement.classList.toggle('open')">
-                            <h3>💡 Tips</h3><span class="guide-chevron">▼</span>
+                            <h3><span class="title-ico" data-icon="bulb"></span>Tips</h3><span class="guide-chevron" data-icon="chevron"></span>
                         </div>
                         <div class="guide-body">
                             <ul>
@@ -825,7 +837,7 @@
                     </div>
 
                     <div class="guide-footer">
-                        Built with ❤️ by <strong>Shalin Rahman</strong> · Ahordian v2.0 · Web Audio API
+                        Built with <span class="ico-heart" data-icon="heart" data-icon-size="14"></span> by <strong>Shalin Rahman</strong> · Ahordian v2.0 · Web Audio API
                     </div>
                 </div>
             </main>

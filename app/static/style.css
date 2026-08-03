@@ -1303,47 +1303,19 @@ input[type=range] { width: 100%; }
     border-color: var(--primary) !important;
 }
 
-
- / *   S c r e e n   N a v i g a t i o n   S y s t e m   * / 
- . s c r e e n   { 
-         d i s p l a y :   n o n e ; 
-         a n i m a t i o n :   f a d e I n   0 . 4 s   e a s e ; 
- } 
- 
- . s c r e e n . a c t i v e   { 
-         d i s p l a y :   b l o c k ; 
- } 
- 
- @ k e y f r a m e s   f a d e I n   { 
-
-
- / *   S c r e e n   N a v i g a t i o n   S y s t e m   * / 
- . s c r e e n   { 
-         d i s p l a y :   n o n e ; 
-         a n i m a t i o n :   f a d e I n   0 . 4 s   e a s e ; 
- } 
- 
- . s c r e e n . a c t i v e   { 
-         d i s p l a y :   b l o c k ; 
- } 
- 
- @ k e y f r a m e s   f a d e I n   { 
-         f r o m   {   o p a c i t y :   0 ;   t r a n s f o r m :   t r a n s l a t e Y ( 1 0 p x ) ;   } 
-         t o   {   o p a c i t y :   1 ;   t r a n s f o r m :   t r a n s l a t e Y ( 0 ) ;   } 
- } 
- 
- / *   G l a s s   M u l t i - S c r e e n   S u p p o r t   * / 
- .circle-page, .fb-page {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        gap: 20px;
-        padding-bottom: 30px;
+/* Glass Multi-Screen Support */
+.circle-page, .fb-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 20px;
+    padding-bottom: 30px;
 }
 
 /* NOW PLAYING PILL */
 .now-playing-pill {
-    display: flex;
+    /* Hidden until a session starts; App.js sets display:flex to reveal it. */
+    display: none;
     align-items: center;
     gap: 8px;
     background: rgba(255, 215, 0, 0.15);
@@ -1535,3 +1507,376 @@ input[type=range] { width: 100%; }
 .guide-footer strong {
     color: var(--primary);
 }
+/* ==========================================================================
+   ICONS, LAYOUT UTILITIES, JAM STATION
+   Everything below replaces a style="" attribute that used to live in
+   index.html. Icons are injected by hydrateIcons() from js/Icons.js.
+   ========================================================================== */
+
+/* --- Icons ------------------------------------------------------------- */
+.ui-icon { flex-shrink: 0; }
+
+.btn-ico, .btn-ico-end, .btn-ico-only, .title-ico, .topbar-ico,
+.ico-heart, .jam-brand-ico, .sample-status-ico, .guide-chevron {
+    display: inline-flex;
+    align-items: center;
+    /* a click on the glyph must still count as a click on the button */
+    pointer-events: none;
+}
+.btn-ico { margin-right: 6px; }
+.btn-ico-end { margin-left: 6px; }
+.title-ico { margin-right: 8px; color: var(--primary); }
+.ico-heart { color: #ff5c7a; }
+/* tape button turns red while armed */
+.rec-on { color: #ff4d4f; }
+
+h2.page-title, .dash-card h3, .guide-header h3, .guide-intro h2 {
+    display: flex;
+    align-items: center;
+}
+
+/* --- Layout utilities -------------------------------------------------- */
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.row-sm { gap: 5px; }
+.row-lg { gap: 15px; }
+.row-center { align-items: center; }
+.row-nowrap { flex-wrap: nowrap; }
+.row-split { display: flex; justify-content: space-between; align-items: center; }
+.fill { flex: 1; min-width: 150px; }
+.fill-even { flex: 1; }
+.w-full { width: 100%; }
+.spacer-sm { margin-top: 8px; }
+.spacer-md { margin-top: 15px; }
+.spacer-lg { margin-top: 20px; }
+.spacer-bottom-md { margin-bottom: 12px; }
+.spacer-bottom-lg { margin-bottom: 20px; }
+.divider-top { margin-top: 24px; border-top: 1px solid var(--glass-border); padding-top: 16px; }
+.text-muted-sm { font-size: 0.85rem; color: var(--text-muted); }
+.inline-value { color: var(--primary); font-weight: 700; }
+.accent-title { color: var(--primary); }
+.hint { color: var(--text-muted); text-align: center; padding: 40px 0; }
+.stat-xl { font-size: 1.8rem; font-weight: 900; color: var(--primary); }
+.stat-lg { font-size: 1.4rem; }
+.is-hidden { display: none; }
+.fb-btn-label.flush { margin: 0; }
+.checkbox-label.centered { justify-content: center; margin-bottom: 4px; }
+
+/* .dashboard-grid is a CSS grid, so the old inline `flex: 2` did nothing on a
+   card. A wide card spans two tracks instead. */
+.dash-card.wide { grid-column: span 2; }
+.dash-card.narrow-card { max-width: 500px; }
+.dashboard-grid.grid-top { align-items: start; }
+
+@media (max-width: 1100px) {
+    .dash-card.wide { grid-column: span 1; }
+}
+
+/* --- Topbar ------------------------------------------------------------ */
+.sample-status {
+    /* revealed by App.js (display:flex) while samples decode */
+    display: none;
+    align-items: center;
+    gap: 5px;
+    margin-left: 10px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.sample-status-ico { animation: spin-anim 1s linear infinite; }
+
+.sidebar-feedback {
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+.sidebar-feedback a { color: var(--primary); text-decoration: none; opacity: 0.8; }
+
+/* --- Fretboard / explorer toolbars ------------------------------------- */
+.control-well {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+}
+.custom-tuning-input {
+    /* revealed by the pencil toggle (display:block) */
+    display: none;
+    width: 120px;
+    font-size: 0.7rem !important;
+}
+.icon-only-btn { min-width: 30px; padding: 4px; }
+.fb-tape-wrap { display: flex; flex-direction: column; gap: 4px; }
+
+/* --- Circle of Fifths -------------------------------------------------- */
+.circle-content-row {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    flex-wrap: wrap;
+}
+.circle-content-row > .circle-container,
+.circle-content-row > .circle-info-panel { flex: 1; min-width: 300px; }
+.circle-info-panel { max-width: 600px; }
+.cof-notes {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem !important;
+    color: var(--text-main) !important;
+    letter-spacing: 2px;
+    margin: 10px 0 5px 0 !important;
+}
+.cof-key-sig { margin-bottom: 12px; font-size: 0.85rem !important; }
+
+/* --- Ear Training ------------------------------------------------------ */
+.quiz-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+}
+.quiz-question {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 24px;
+    text-align: center;
+}
+.quiz-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    max-width: 500px;
+}
+.ear-feedback { margin-top: 20px; min-height: 28px; }
+
+/* --- Lessons ----------------------------------------------------------- */
+.lesson-viewer {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 380px;
+}
+.lesson-title { color: var(--primary); font-size: 1.4rem; }
+.lesson-desc { color: var(--text-muted); font-size: 0.9rem; margin: 4px 0 20px; }
+.lesson-step-panel { padding: 16px; }
+.lesson-step-content {
+    padding-top: 12px;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-main);
+}
+.lesson-nav { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.lesson-complete-btn {
+    align-self: center;
+    margin-top: 5px;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* --- Tab player -------------------------------------------------------- */
+.tab-display {
+    background: rgba(0,0,0,0.6);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+    overflow-x: auto;
+}
+
+/* --- Guide ------------------------------------------------------------- */
+.guide-tip { display: flex; align-items: center; margin-top: 8px; }
+.guide-tip .btn-ico { color: var(--primary); }
+.guide-note { font-size: 0.82rem; opacity: 0.7; }
+
+/* ==========================================================================
+   JAM STATION
+   A separate instrument, not another fretboard control — so it reads as its
+   own panel: hard top rule, own background, and clear space above it.
+   ========================================================================== */
+.jam-station {
+    position: relative;
+    margin-top: 28px;
+    padding: 16px 20px 20px;
+    background: linear-gradient(160deg, rgba(45,0,70,0.55), rgba(10,0,20,0.75));
+    border: 1px solid var(--glass-border);
+    border-top: 3px solid var(--primary);
+    border-radius: 14px;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.45), 0 0 30px rgba(255,215,0,0.06);
+    flex-shrink: 0;
+}
+
+/* hairline in the gap above, so the break from the fretboard reads even when
+   the panel scrolls into view mid-page */
+.jam-station::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
+.jam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(255,215,0,0.18);
+}
+
+.jam-brand { display: flex; align-items: center; gap: 12px; }
+.jam-brand-ico { color: var(--primary); }
+.jam-brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+
+.jam-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--primary);
+}
+.jam-subtitle {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.jam-chord {
+    /* revealed by App.js while the progression runs */
+    display: none;
+    min-width: 70px;
+    text-align: center;
+    background: rgba(255,215,0,0.2);
+    border: 1px solid rgba(255,215,0,0.45);
+    padding: 4px 14px;
+    border-radius: 20px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.jam-controls {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+.jam-key-field { width: 80px; }
+.jam-transport { display: flex; gap: 5px; }
+.jam-btn { width: 100px; }
+
+.jam-mixer {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,215,0,0.2);
+}
+.jam-mixer .settings-mini { flex: 1; min-width: 150px; }
+.jam-mixer input[type=range] { accent-color: var(--primary); }
+.jam-slider-label { display: flex; justify-content: space-between; }
+.jam-slider-value { color: var(--primary); font-weight: 700; }
+
+/* --- JS-rendered lists (practice routine, lesson list) -------------------
+   These replace style="" attributes that used to be built into template
+   strings in App.js / LessonManager.js. */
+.routine-item {
+    margin-bottom: 12px;
+    /* --i is the stagger index set by App.js */
+    animation: fadeInUp calc(0.2s + var(--i, 0) * 0.1s) ease;
+}
+.routine-title { display: flex; align-items: center; }
+.routine-duration { color: var(--primary); font-size: 0.85rem; }
+.routine-desc { padding: 10px 16px; color: var(--text-muted); }
+
+.lesson-card { cursor: pointer; margin-bottom: 10px; }
+.lesson-card.active-lesson { border-color: var(--primary); }
+.lesson-card-title { display: flex; align-items: center; font-size: 1.2rem; }
+.lesson-card-desc { font-size: 0.85rem; color: var(--text-muted); margin-top: 6px; }
+.lesson-badge {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.lesson-badge.done { background: rgba(34,197,94,0.2); color: #4ade80; }
+
+/* the feedback line now leads with an icon, so centre it as a flex row */
+.ear-feedback { display: flex; align-items: center; justify-content: center; }
+.quiz-question { display: flex; align-items: center; justify-content: center; }
+
+/* --- Classes for markup that used to be styled inline from JS ------------ */
+.recent-item-type { color: var(--primary); }
+.note-tag.clickable { cursor: pointer; }
+.empty-note { color: var(--text-muted); }
+
+/* tape nodes: --hue is set per node by App.updateTape() */
+.tape-node {
+    background: hsla(var(--hue, 45), 60%, 50%, 0.12);
+    border-color: hsla(var(--hue, 45), 60%, 50%, 0.3);
+    color: hsl(var(--hue, 45), 70%, 70%);
+}
+.tape-node.is-current {
+    background: rgba(255,215,0,0.3);
+    border-color: #ffd700;
+    color: #ffd700;
+    box-shadow: 0 0 10px rgba(255,215,0,0.3);
+    transform: scale(1.1);
+}
+
+/* DSP analysis report (FileManager) */
+.advanced-report { border-left: 4px solid var(--primary); }
+.report-header { margin-bottom: 10px; }
+.report-title { color: var(--primary); }
+.report-meta { font-size: 0.8rem; color: var(--text-muted); }
+.report-actions { margin-top: 10px; }
+.transcription-timeline {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 10px 0;
+    border-top: 1px solid var(--glass-border);
+}
+.timeline-node {
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    min-width: 50px;
+    text-align: center;
+}
+.timeline-note { color: var(--primary); font-weight: 800; }
+.timeline-time { font-size: 0.6rem; color: var(--text-muted); }
+
+/* Last-10 detection chips (TrackingManager) */
+.last10-chip {
+    background: rgba(255,255,255,0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    border: 1px solid var(--glass-border);
+}
+.last10-note { color: var(--primary); }
+.last10-string { color: #fbbf24; }
+
+/* Key-signature readout and position filters (CircleManager) */
+.sig-notes { font-size: 0.7rem; color: var(--primary); opacity: 0.8; }
+.sig-label { color: var(--primary); }
+.sig-formula { color: var(--text-muted); font-size: 0.75rem; }
+.sample-btn.filter-all { background: var(--primary); color: #000; font-weight: 900; }
+.sample-btn.filter-pos { opacity: 0.9; }
+.filter-range { font-size: 0.6rem; opacity: 0.8; }

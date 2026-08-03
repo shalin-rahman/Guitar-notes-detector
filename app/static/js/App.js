@@ -19,7 +19,7 @@ import AudioSessionManager, { AudioSessionType } from './audio/AudioSessionManag
 import SampleManager from './audio/SampleManager.js';
 import DrumSampler from './audio/DrumSampler.js';
 import RhythmEngine from './audio/RhythmEngine.js';
-import { Icons } from './Icons.js';
+import { Icons, icon, hydrateIcons } from './Icons.js';
 
 class App {
     constructor() {
@@ -156,7 +156,7 @@ class App {
         this.bindEvents();
         this.initIcons();
         this.loadFretboardHistory();
-        this.loadSamples();
+        this.renderSampleButtons();
         this.populateTunings();
         this.applySettings();
         this.updateDashboard();
@@ -172,6 +172,24 @@ class App {
                 btn.innerHTML = Icons[target] + ' ' + text;
             }
         });
+        // Fills every `data-icon` placeholder in the static markup.
+        hydrateIcons(document);
+    }
+
+    /**
+     * Rewrites a button's label while keeping its icon. Buttons that toggle
+     * (Play/Stop, Loop ON/OFF) set their label from JS, and a plain
+     * `textContent =` would wipe the hydrated SVG.
+     */
+    setBtnLabel(btn, iconName, text, iconClass = '') {
+        if (!btn) return;
+        btn.innerHTML = `<span class="btn-ico ${iconClass}">${icon(iconName)}</span>${text}`;
+    }
+
+    /** Same idea for a button whose whole label is the glyph. */
+    setIconOnly(btn, iconName, size = 16) {
+        if (!btn) return;
+        btn.innerHTML = `<span class="btn-ico-only">${icon(iconName, { size })}</span>`;
     }
 
     /**
@@ -188,6 +206,47 @@ class App {
         this.elements.navBtns.forEach(b => {
             b.classList.toggle('active', b.getAttribute('data-target') === target);
         });
+    }
+
+    /**
+     * Navigates to a screen and runs its per-screen setup.
+     *
+     * `stopAudio` is the only difference between a nav-bar click and the Now Playing
+     * pill's jump-to-source button: the nav bar tears audio down, but jumping to
+     * what is currently playing must not silence the thing you asked to see.
+     *
+     * Teardown is a single stopAll() — it fans out to the registered stop handlers,
+     * so App does not need to know every audio producer. Any new audio feature must
+     * register a handler in initAudioContext() or navigation will not stop it.
+     */
+    enterScreen(target, { stopAudio = true } = {}) {
+        if (!target) return;
+        this.showScreen(target);
+
+        if (stopAudio && this.sessionManager) this.sessionManager.stopAll();
+
+        if (target === 'home-screen') this.updateDashboard();
+
+        // Lazy-init Ear Training on first visit
+        if (target === 'ear-training-screen' && !this.earTraining) {
+            this.initAudioContext();
+            this.earTraining = new EarTrainingManager(this);
+        }
+
+        // Lazy-init Lessons on first visit
+        if (target === 'lessons-screen' && !this.lessonManager) {
+            this.initAudioContext();
+            this.lessonManager = new LessonManager(this);
+        }
+
+        // Lazy-init Tab Player on first visit
+        if (target === 'tab-player-screen' && !this.tabPlayer) {
+            this.initAudioContext();
+            this.tabPlayer = new TabPlayer(this);
+        }
+
+        // Refresh high scores when visiting Practice screen
+        if (target === 'practice-screen') this.loadHighScores();
     }
 
     bindEvents() {
@@ -224,11 +283,10 @@ class App {
         
         if (this.elements.nowPlayingGoto) {
             this.elements.nowPlayingGoto.addEventListener('click', () => {
-                const targetId = this.elements.nowPlayingGoto.dataset.targetScreen;
-                if (targetId) {
-                    const btn = Array.from(this.elements.navBtns).find(b => b.dataset.target === targetId);
-                    if (btn) btn.click();
-                }
+                // Deliberately not a nav-button click: that would stopAll() and
+                // silence the very session the pill is pointing at.
+                this.enterScreen(this.elements.nowPlayingGoto.dataset.targetScreen,
+                                 { stopAudio: false });
             });
         }
 
@@ -250,38 +308,7 @@ class App {
 
         this.elements.navBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                const target = btn.getAttribute('data-target');
-                this.showScreen(target);
-
-                // Stop active audio on navigation
-                this.abortReplay();
-                if (this.backingEngine) this.backingEngine.stop();
-                if (this.metronome) this.metronome.stop();
-                if (this.tabPlayer && typeof this.tabPlayer.stop === 'function') this.tabPlayer.stop();
-                if (this.sessionManager) this.sessionManager.stopAll();
-
-                if (target === 'home-screen') this.updateDashboard();
-                
-                // Lazy-init Ear Training on first visit
-                if (target === 'ear-training-screen' && !this.earTraining) {
-                    this.initAudioContext();
-                    this.earTraining = new EarTrainingManager(this);
-                }
-                
-                // Lazy-init Lessons on first visit
-                if (target === 'lessons-screen' && !this.lessonManager) {
-                    this.initAudioContext();
-                    this.lessonManager = new LessonManager(this);
-                }
-
-                // Lazy-init Tab Player on first visit
-                if (target === 'tab-player-screen' && !this.tabPlayer) {
-                    this.initAudioContext();
-                    this.tabPlayer = new TabPlayer(this);
-                }
-                
-                // Refresh high scores when visiting Practice screen
-                if (target === 'practice-screen') this.loadHighScores();
+                this.enterScreen(btn.getAttribute('data-target'));
             });
         });
 
@@ -314,10 +341,10 @@ class App {
                     const bpm = Math.round(60000 / avgInterval);
                     if (pracBpm) pracBpm.value = Math.min(200, Math.max(40, bpm));
                     if (pracBpmLabel) pracBpmLabel.textContent = Math.min(200, Math.max(40, bpm)) + ' BPM';
-                    tapBtn.textContent = `👆 ${Math.min(200, Math.max(40, bpm))} BPM`;
+                    this.setBtnLabel(tapBtn, 'tap', `${Math.min(200, Math.max(40, bpm))} BPM`);
                     clearTimeout(this._tapTimeout);
                     this._tapTimeout = setTimeout(() => {
-                        tapBtn.textContent = '👆 Tap Tempo';
+                        this.setBtnLabel(tapBtn, 'tap', 'Tap Tempo');
                         this._tapTimes = [];
                     }, 3000);
                 }
@@ -378,14 +405,7 @@ class App {
         }
         
         if (this.elements.jamStopBtn) {
-            this.elements.jamStopBtn.addEventListener('click', () => {
-                if (this.backingEngine) this.backingEngine.stop();
-                this.elements.jamPlayBtn.disabled = false;
-                this.elements.jamStopBtn.disabled = true;
-                this.elements.liveChordIndicator.style.display = 'none';
-                this.elements.liveChordIndicator.textContent = '--';
-                this.fretboard.clearOverlay();
-            });
+            this.elements.jamStopBtn.addEventListener('click', () => this.stopJam());
         }
         
         if (this.elements.jamBpmSlider) {
@@ -440,12 +460,15 @@ class App {
         };
 
         this.elements.metroToggle.addEventListener('click', () => {
+            // First click on a fresh page had no AudioContext yet, so
+            // metronome.start() read currentTime off null.
+            this.initAudioContext();
             if (this.metronome.isPlaying) {
                 this.metronome.stop();
-                this.elements.metroToggle.textContent = '⏵';
+                this.setIconOnly(this.elements.metroToggle, 'play', 14);
             } else {
                 this.metronome.start();
-                this.elements.metroToggle.textContent = '⏸';
+                this.setIconOnly(this.elements.metroToggle, 'pause', 14);
             }
         });
 
@@ -458,7 +481,12 @@ class App {
         // Transcription Controls
         this.elements.liveCaptureBtn.addEventListener('click', () => {
             this.isCapturing = !this.isCapturing;
-            this.elements.liveCaptureBtn.textContent = this.isCapturing ? '🟢 Record to Tape: ON' : '🔴 Record to Tape: OFF';
+            this.setBtnLabel(
+                this.elements.liveCaptureBtn,
+                'record',
+                this.isCapturing ? 'Record to Tape: ON' : 'Record to Tape: OFF',
+                this.isCapturing ? 'rec-on' : ''
+            );
             this.elements.liveCaptureBtn.classList.toggle('active', this.isCapturing);
         });
 
@@ -478,10 +506,12 @@ class App {
         // Custom Tuning Toggle
         if(this.elements.toggleCustomTuningBtn) {
             this.elements.toggleCustomTuningBtn.addEventListener('click', () => {
-                const isHidden = this.elements.customTuningInput.style.display === 'none';
+                // The hidden default lives in .custom-tuning-input, not inline,
+                // so read the resolved value rather than the style attribute.
+                const isHidden = getComputedStyle(this.elements.customTuningInput).display === 'none';
                 this.elements.customTuningInput.style.display = isHidden ? 'block' : 'none';
                 this.elements.tuningSelect.style.display = isHidden ? 'none' : 'block';
-                this.elements.toggleCustomTuningBtn.textContent = isHidden ? '✖' : '✎';
+                this.setIconOnly(this.elements.toggleCustomTuningBtn, isHidden ? 'close' : 'edit');
             });
         }
 
@@ -547,7 +577,7 @@ class App {
         } else {
             this.elements.recentItemsList.innerHTML = recent.map(item => `
                 <li class="recent-item">
-                    <span style="color:var(--primary)">${item.type}</span>: ${item.name}
+                    <span class="recent-item-type">${item.type}</span>: ${item.name}
                 </li>
             `).join('');
         }
@@ -596,51 +626,54 @@ class App {
             const tech = techniques[Math.floor(Math.random() * techniques.length)];
             const key = keys[Math.floor(Math.random() * keys.length)];
             routine = [
-                { title: 'Warm Up', desc: `Chromatic exercise across all strings. Start at 60 BPM.`, duration: perSegment, icon: '🔥' },
-                { title: 'Technique Focus', desc: `${tech} — Play ${key} Major scale pattern up and down at ${bpm} BPM.`, duration: perSegment * 2, icon: '🎯' },
-                { title: 'Apply to Song', desc: `Pick a riff or lick you know. Apply ${tech} throughout.`, duration: perSegment, icon: '🎸' },
-                { title: 'Cool Down', desc: 'Slow, relaxed scale run. Focus on clean tone.', duration: Math.max(1, duration - perSegment * 4), icon: '✨' }
+                { title: 'Warm Up', desc: `Chromatic exercise across all strings. Start at 60 BPM.`, duration: perSegment, icon: 'flame' },
+                { title: 'Technique Focus', desc: `${tech} — Play ${key} Major scale pattern up and down at ${bpm} BPM.`, duration: perSegment * 2, icon: 'target' },
+                { title: 'Apply to Song', desc: `Pick a riff or lick you know. Apply ${tech} throughout.`, duration: perSegment, icon: 'guitar' },
+                { title: 'Cool Down', desc: 'Slow, relaxed scale run. Focus on clean tone.', duration: Math.max(1, duration - perSegment * 4), icon: 'sparkle' }
             ];
         } else if (resolvedFocus === 'scales') {
             const scale = pentatonics[Math.floor(Math.random() * pentatonics.length)];
             routine = [
-                { title: 'Position 1', desc: `Play ${scale} in Position 1 (open position). Ascending & descending. BPM: ${bpm}`, duration: perSegment, icon: '📍' },
-                { title: 'Position 2 & 3', desc: `Shift to positions 2 and 3. Connect shapes smoothly.`, duration: perSegment, icon: '📍' },
-                { title: 'Full Fretboard Run', desc: `Play all 5 CAGED positions of ${scale} from low E to high e.`, duration: perSegment, icon: '🏃' },
-                { title: 'Improvise!', desc: `Use ${scale} over a backing track. Try targeting chord tones.`, duration: duration - perSegment * 3, icon: '🎵' }
+                { title: 'Position 1', desc: `Play ${scale} in Position 1 (open position). Ascending & descending. BPM: ${bpm}`, duration: perSegment, icon: 'pin' },
+                { title: 'Position 2 & 3', desc: `Shift to positions 2 and 3. Connect shapes smoothly.`, duration: perSegment, icon: 'pin' },
+                { title: 'Full Fretboard Run', desc: `Play all 5 CAGED positions of ${scale} from low E to high e.`, duration: perSegment, icon: 'run' },
+                { title: 'Improvise!', desc: `Use ${scale} over a backing track. Try targeting chord tones.`, duration: duration - perSegment * 3, icon: 'note' }
             ];
         } else if (resolvedFocus === 'chords') {
             const key = keys[Math.floor(Math.random() * keys.length)];
             routine = [
-                { title: 'Open Chord Review', desc: `Drill G → C → D → Em transitions. Clean fret contact. ${bpm} BPM`, duration: perSegment, icon: '🎹' },
-                { title: 'Barre Chord Focus', desc: `Practice F Major, Bm. Slow strumming, focus on full ring.`, duration: perSegment, icon: '💪' },
-                { title: 'Diatonic Triads in ${key}', desc: `Play all 7 diatonic chords in key of ${key}. Use 3-note voicings.`, duration: perSegment, icon: '🎼' },
-                { title: 'Rhythm Variation', desc: `Apply chord changes to a simple I → IV → V → I progression in ${key}.`, duration: duration - perSegment * 3, icon: '🥁' }
+                { title: 'Open Chord Review', desc: `Drill G → C → D → Em transitions. Clean fret contact. ${bpm} BPM`, duration: perSegment, icon: 'piano' },
+                { title: 'Barre Chord Focus', desc: `Practice F Major, Bm. Slow strumming, focus on full ring.`, duration: perSegment, icon: 'dumbbell' },
+                { title: 'Diatonic Triads in ${key}', desc: `Play all 7 diatonic chords in key of ${key}. Use 3-note voicings.`, duration: perSegment, icon: 'sheet' },
+                { title: 'Rhythm Variation', desc: `Apply chord changes to a simple I → IV → V → I progression in ${key}.`, duration: duration - perSegment * 3, icon: 'drum' }
             ];
         } else if (resolvedFocus === 'rhythm') {
             const pattern = strumPatterns[Math.floor(Math.random() * strumPatterns.length)];
             routine = [
-                { title: 'Tap Tempo Drill', desc: `Use the Tap Tempo button to set ${bpm} BPM. Feel the pulse. Count aloud: 1-2-3-4.`, duration: perSegment, icon: '🥁' },
-                { title: 'Pattern Isolation', desc: `Practice strumming pattern: "${pattern}" on an open chord. Slow first.`, duration: perSegment * 2, icon: '🎵' },
-                { title: 'Chord + Rhythm', desc: `Apply pattern to a G → C → D progression. Keep the groove tight.`, duration: duration - perSegment * 3, icon: '🔥' }
+                { title: 'Tap Tempo Drill', desc: `Use the Tap Tempo button to set ${bpm} BPM. Feel the pulse. Count aloud: 1-2-3-4.`, duration: perSegment, icon: 'drum' },
+                { title: 'Pattern Isolation', desc: `Practice strumming pattern: "${pattern}" on an open chord. Slow first.`, duration: perSegment * 2, icon: 'note' },
+                { title: 'Chord + Rhythm', desc: `Apply pattern to a G → C → D progression. Keep the groove tight.`, duration: duration - perSegment * 3, icon: 'flame' }
             ];
         } else {
             // theory
             routine = [
-                { title: 'Interval Ear Training', desc: `Open the Ear Training module. Do 10 interval recognition questions.`, duration: perSegment, icon: '👂' },
-                { title: 'Circle of Fifths', desc: `Visit the Circle of Fifths. Select 3 keys, identify their relative minors and diatonic chords.`, duration: perSegment, icon: '🎡' },
-                { title: 'Chord Construction', desc: `In the Chord Explorer, build and play a Major 7, Minor 7, and Dominant 7 chord.`, duration: perSegment, icon: '🏗️' },
-                { title: 'Apply & Improvise', desc: `Find a key using the Circle. Play the diatonic chords, then solo with the matching pentatonic.`, duration: duration - perSegment * 3, icon: '🎯' }
+                { title: 'Interval Ear Training', desc: `Open the Ear Training module. Do 10 interval recognition questions.`, duration: perSegment, icon: 'ear' },
+                { title: 'Circle of Fifths', desc: `Visit the Circle of Fifths. Select 3 keys, identify their relative minors and diatonic chords.`, duration: perSegment, icon: 'wheel' },
+                { title: 'Chord Construction', desc: `In the Chord Explorer, build and play a Major 7, Minor 7, and Dominant 7 chord.`, duration: perSegment, icon: 'layers' },
+                { title: 'Apply & Improvise', desc: `Find a key using the Circle. Play the diatonic chords, then solo with the matching pentatonic.`, duration: duration - perSegment * 3, icon: 'target' }
             ];
         }
 
+        // --i only carries the stagger index; the animation itself lives in CSS.
         output.innerHTML = routine.map((item, i) => `
-            <div class="theory-panel" style="margin-bottom: 12px; animation: fadeInUp ${0.2 + i * 0.1}s ease;">
+            <div class="theory-panel routine-item" style="--i:${i}">
                 <div class="theory-header">
-                    <span>${item.icon} ${i + 1}. ${item.title}</span>
-                    <span style="color:var(--primary); font-size:0.85rem;">${item.duration} min</span>
+                    <span class="routine-title">
+                        <span class="btn-ico">${icon(item.icon)}</span>${i + 1}. ${item.title}
+                    </span>
+                    <span class="routine-duration">${item.duration} min</span>
                 </div>
-                <div style="padding: 10px 16px; color: var(--text-muted);">${item.desc}</div>
+                <div class="routine-desc">${item.desc}</div>
             </div>
         `).join('');
     }
@@ -653,6 +686,24 @@ class App {
         });
         const streakEl = document.getElementById('hs-streak');
         if (streakEl) streakEl.textContent = localStorage.getItem('ear_best_streak') || '0';
+    }
+
+    /**
+     * Stops the jam track AND resets its UI. This has to be a method rather than
+     * inline in the stop-button handler: the exclusivity sweep also stops the
+     * engine, and without this the Play button stayed disabled and the live chord
+     * indicator stayed visible after another feature took over the audio session.
+     * Safe to call when nothing is playing.
+     */
+    stopJam() {
+        if (this.backingEngine) this.backingEngine.stop();
+        if (this.elements.jamPlayBtn) this.elements.jamPlayBtn.disabled = false;
+        if (this.elements.jamStopBtn) this.elements.jamStopBtn.disabled = true;
+        if (this.elements.liveChordIndicator) {
+            this.elements.liveChordIndicator.style.display = 'none';
+            this.elements.liveChordIndicator.textContent = '--';
+        }
+        if (this.fretboard) this.fretboard.clearOverlay();
     }
 
     onJamChordChange(chordData, numeral) {
@@ -892,7 +943,7 @@ class App {
         if (!btn) return;
         const n = this.detectionHistory ? this.detectionHistory.length : 0;
         btn.disabled = n === 0;
-        btn.textContent = n > 0 ? `Replay (${n})` : 'Replay (64 max)';
+        this.setBtnLabel(btn, 'play', n > 0 ? `Replay (${n})` : 'Replay (64 max)');
         if (this.elements.fbStopReplayBtn) this.elements.fbStopReplayBtn.style.display = 'none';
     }
 
@@ -927,9 +978,11 @@ class App {
         const btn = this.elements.replayHistoryBtn;
         if (btn) {
             btn.disabled = false; // stays clickable so it can cancel
-            btn.textContent = '■ Stop';
+            this.setBtnLabel(btn, 'stop', 'Stop');
         }
-        if (this.elements.fbStopReplayBtn) this.elements.fbStopReplayBtn.style.display = '';
+        // Explicit value: the hidden default now comes from .is-hidden in CSS,
+        // so clearing the inline style would leave it hidden.
+        if (this.elements.fbStopReplayBtn) this.elements.fbStopReplayBtn.style.display = 'inline-block';
 
         // Navigate without the nav handler's audio teardown.
         this.showScreen('fretboard-screen');
@@ -1007,7 +1060,8 @@ class App {
                 if (this.metronome) this.metronome.stop();
             });
             this.sessionManager.registerStopHandler(AudioSessionType.JAM_TRACK, () => {
-                if (this.backingEngine) this.backingEngine.stop();
+                // stopJam(), not backingEngine.stop(), so the Jam UI resets too.
+                this.stopJam();
             });
             this.sessionManager.registerStopHandler(AudioSessionType.TAB_PLAYER, () => {
                 if (this.tabPlayer && typeof this.tabPlayer.stop === 'function') this.tabPlayer.stop();
@@ -1018,11 +1072,17 @@ class App {
             this.sessionManager.registerStopHandler(AudioSessionType.REPLAY, () => {
                 this.abortReplay();
             });
+            // Scale/pattern demos run for several seconds, so they must be stoppable by
+            // navigation and by stopAll(). Single fretboard-note previews stay
+            // session-free on purpose — see triggerFretboardNote().
+            this.sessionManager.registerStopHandler(AudioSessionType.NOTE_PREVIEW, () => {
+                this.sequenceAbortFlag = true;
+            });
 
             this.sessionManager.onStateChangeCallback = (state) => {
                 if (state.active) {
                     if (this.elements.nowPlayingPill) this.elements.nowPlayingPill.style.display = 'flex';
-                    if (this.elements.nowPlayingLabel) this.elements.nowPlayingLabel.textContent = '▶ ' + state.label;
+                    if (this.elements.nowPlayingLabel) this.elements.nowPlayingLabel.textContent = state.label;
                     if (this.elements.nowPlayingGoto) this.elements.nowPlayingGoto.dataset.targetScreen = state.screen;
                 } else {
                     if (this.elements.nowPlayingPill) this.elements.nowPlayingPill.style.display = 'none';
@@ -1033,21 +1093,25 @@ class App {
                 const indicator = document.getElementById('sample-status-indicator');
                 if (!indicator) return;
                 
+                // The icon and the label are separate spans, so target them by class.
+                const label = indicator.querySelector('.sample-status-text');
+                const spinner = indicator.querySelector('.sample-status-ico');
+
                 if (status === 'loading') {
                     indicator.style.display = 'flex';
-                    indicator.querySelector('span').textContent = 'Loading Audio...';
-                    indicator.querySelector('svg').style.display = 'block';
+                    if (label) label.textContent = 'Loading Audio...';
+                    if (spinner) spinner.style.display = 'inline-flex';
                     indicator.style.color = 'var(--text-muted)';
                 } else if (status === 'partial') {
                     indicator.style.display = 'flex';
-                    indicator.querySelector('span').textContent = 'Audio Partially Loaded';
-                    indicator.querySelector('svg').style.display = 'none';
+                    if (label) label.textContent = 'Audio Partially Loaded';
+                    if (spinner) spinner.style.display = 'none';
                     indicator.style.color = '#ffaa00';
                     setTimeout(() => indicator.style.display = 'none', 4000);
                 } else if (status === 'error') {
                     indicator.style.display = 'flex';
-                    indicator.querySelector('span').textContent = 'Audio Load Error (Using Synth)';
-                    indicator.querySelector('svg').style.display = 'none';
+                    if (label) label.textContent = 'Audio Load Error (Using Synth)';
+                    if (spinner) spinner.style.display = 'none';
                     indicator.style.color = '#ff4444';
                     setTimeout(() => indicator.style.display = 'none', 4000);
                 } else {
@@ -1104,14 +1168,19 @@ class App {
     loadFretboardHistory() {
         const history = JSON.parse(localStorage.getItem('ahinotes_recent') || '[]');
         this.elements.fretboardHistory.innerHTML = history.map(h => `
-            <div class="note-tag" onclick="window.AhordianApp.triggerFretboardNote('${h.note}')" style="cursor:pointer">
+            <div class="note-tag clickable" onclick="window.AhordianApp.triggerFretboardNote('${h.note}')">
                 <span class="name">${h.note}</span>
                 <span class="pos">${h.pos}</span>
             </div>
-        `).join('') || '<div style="color:var(--text-muted)">No history yet</div>';
+        `).join('') || '<div class="empty-note">No history yet</div>';
     }
 
-    loadSamples() {
+    /**
+     * Renders the scale/pattern demo buttons. Named renderSampleButtons, not
+     * loadSamples, so it is not confused with audio sample loading — that lives in
+     * initAudioContext() and cannot run before the AudioContext exists.
+     */
+    renderSampleButtons() {
         this.elements.scaleButtons.innerHTML = AppConfig.SCALE_DEFINITIONS.map(scale => `
             <button class="secondary-btn small-btn sample-btn" onclick="window.AhordianApp.triggerScale('${scale.name}')">${scale.name}</button>
         `).join('');
@@ -1184,7 +1253,7 @@ class App {
         }
 
         if (this.elements.positionInfo) {
-            this.elements.positionInfo.textContent = `▶ ${scaleName}: ${fullDisplayNotes.join('-')}`;
+            this.elements.positionInfo.textContent = `${scaleName}: ${fullDisplayNotes.join('-')}`;
         }
         
         // Update Music Theory Panel
@@ -1238,10 +1307,8 @@ class App {
         this.elements.sequenceTape.innerHTML = this.tapeBuffer.map((n, i) => {
             const hue = (i * 25) % 360;
             const isCurrent = (i === currentNoteIdx);
-            const style = isCurrent
-                ? `background: rgba(255,215,0,0.3); border-color: #ffd700; color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.3); transform: scale(1.1);`
-                : `background: hsla(${hue}, 60%, 50%, 0.12); border-color: hsla(${hue}, 60%, 50%, 0.3); color: hsl(${hue}, 70%, 70%)`;
-            return `<div class="tape-node" style="${style}">${n}</div>`;
+            // --hue is a data value; the colours themselves come from CSS.
+            return `<div class="tape-node${isCurrent ? ' is-current' : ''}" style="--hue:${hue}">${n}</div>`;
         }).join('');
         this.elements.sequenceTape.scrollLeft = this.elements.sequenceTape.scrollWidth;
     }
@@ -1257,23 +1324,38 @@ class App {
         this.initAudioContext();
         this.tapeBuffer = [];
 
-        for (let i = 0; i < notes.length; i++) {
-            if (this.sequenceAbortFlag || this._currentSeqId !== seqId) return;
-
-            const noteGroup = notes[i];
-            this.tapeBuffer.push(noteGroup);
-            if (this.tapeBuffer.length > 15) this.tapeBuffer.shift();
-            this.updateTape(this.tapeBuffer.length - 1);
-
-            const subNotes = noteGroup.includes('-') ? noteGroup.split('-') : [noteGroup];
-            for (const note of subNotes) {
-                if (this.sequenceAbortFlag || this._currentSeqId !== seqId) return;
-                this.triggerFretboardNote(note, tempo);
-                if (subNotes.length > 1) await new Promise(r => setTimeout(r, tempo / 2));
-            }
-            await new Promise(r => setTimeout(r, tempo));
+        // Non-exclusive: playing a scale over a running backing track is a legitimate
+        // practice mode, so this must not steal the session from Jam. It registers only
+        // so navigation / stopAll() can cut it off instead of orphaning the audio.
+        if (this.sessionManager) {
+            this.sessionManager.startSession(AudioSessionType.NOTE_PREVIEW, { exclusive: false });
         }
-        this.updateTape(-1);
+
+        try {
+            for (let i = 0; i < notes.length; i++) {
+                if (this.sequenceAbortFlag || this._currentSeqId !== seqId) return;
+
+                const noteGroup = notes[i];
+                this.tapeBuffer.push(noteGroup);
+                if (this.tapeBuffer.length > 15) this.tapeBuffer.shift();
+                this.updateTape(this.tapeBuffer.length - 1);
+
+                const subNotes = noteGroup.includes('-') ? noteGroup.split('-') : [noteGroup];
+                for (const note of subNotes) {
+                    if (this.sequenceAbortFlag || this._currentSeqId !== seqId) return;
+                    this.triggerFretboardNote(note, tempo);
+                    if (subNotes.length > 1) await new Promise(r => setTimeout(r, tempo / 2));
+                }
+                await new Promise(r => setTimeout(r, tempo));
+            }
+            this.updateTape(-1);
+        } finally {
+            // Only the newest sequence owns teardown; a superseded one must not close
+            // the session out from under the run that replaced it.
+            if (this._currentSeqId === seqId && this.sessionManager) {
+                this.sessionManager.stopSession(AudioSessionType.NOTE_PREVIEW);
+            }
+        }
     }
 
     async start() {

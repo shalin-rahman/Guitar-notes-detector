@@ -1,9 +1,11 @@
+import { icon } from './Icons.js';
+
 export const LESSON_DATA = [
     {
         id: 'lesson-1',
         title: 'Guitar Fundamentals & Posture',
         category: 'Beginner',
-        icon: '🎸',
+        icon: 'guitar',
         description: 'Learn string names, holding the pick, and proper fretting finger posture.',
         steps: [
             {
@@ -30,7 +32,7 @@ export const LESSON_DATA = [
         id: 'lesson-2',
         title: 'The Minor Pentatonic Scale',
         category: 'Intermediate',
-        icon: '🎼',
+        icon: 'sheet',
         description: 'Master Position 1 of the A Minor Pentatonic scale—the most famous soloing shape in rock history.',
         steps: [
             {
@@ -57,7 +59,7 @@ export const LESSON_DATA = [
         id: 'lesson-3',
         title: 'Advanced Technique: Legato & Tapping',
         category: 'Advanced',
-        icon: '⚡',
+        icon: 'rocket',
         description: 'Develop fluid speed using hammer-ons, pull-offs, and two-handed fretboard tapping.',
         steps: [
             {
@@ -130,7 +132,7 @@ export default class LessonManager {
                     this.completedLessons.push(this.currentLesson.id);
                     localStorage.setItem('ahordian_completed_lessons', JSON.stringify(this.completedLessons));
                     this.renderLessonList();
-                    this.elements.completeBtn.textContent = '✅ Completed!';
+                    this.elements.completeBtn.innerHTML = `<span class="btn-ico">${icon('check')}</span>Completed!`;
                 }
             });
         }
@@ -160,12 +162,12 @@ export default class LessonManager {
             const isDone = this.completedLessons.includes(l.id);
             const isActive = l.id === this.currentLesson.id;
             return `
-                <div class="dash-card lesson-card ${isActive ? 'active-lesson' : ''}" style="cursor:pointer; margin-bottom:10px; border-color:${isActive ? 'var(--primary)' : 'var(--glass-border)'}" onclick="window.AhordianApp.lessonManager.loadLesson('${l.id}')">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:1.2rem;">${l.icon} <strong>${l.title}</strong></span>
-                        <span style="font-size:0.75rem; padding:2px 8px; border-radius:10px; background:${isDone ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.1)'}; color:${isDone ? '#4ade80' : 'var(--text-muted)'}">${isDone ? '✓ Completed' : l.category}</span>
+                <div class="dash-card lesson-card ${isActive ? 'active-lesson' : ''}" onclick="window.AhordianApp.lessonManager.loadLesson('${l.id}')">
+                    <div class="row-split">
+                        <span class="lesson-card-title"><span class="btn-ico">${icon(l.icon, { size: 18 })}</span><strong>${l.title}</strong></span>
+                        <span class="lesson-badge ${isDone ? 'done' : ''}">${isDone ? 'Completed' : l.category}</span>
                     </div>
-                    <p style="font-size:0.85rem; color:var(--text-muted); margin-top:6px;">${l.description}</p>
+                    <p class="lesson-card-desc">${l.description}</p>
                 </div>
             `;
         }).join('');
@@ -178,7 +180,7 @@ export default class LessonManager {
         this.currentLesson = lesson;
         this.currentStepIndex = 0;
 
-        if (this.elements.title) this.elements.title.textContent = `${lesson.icon} ${lesson.title}`;
+        if (this.elements.title) this.elements.title.innerHTML = `<span class="btn-ico">${icon(lesson.icon, { size: 20 })}</span>${lesson.title}`;
         if (this.elements.desc) this.elements.desc.textContent = lesson.description;
 
         this.renderLessonList();
@@ -191,7 +193,7 @@ export default class LessonManager {
 
         if (this.elements.stepTitle) this.elements.stepTitle.textContent = step.title;
         if (this.elements.stepContent) this.elements.stepContent.innerHTML = step.content;
-        if (this.elements.stepActionBtn) this.elements.stepActionBtn.textContent = `▶ ${step.actionText}`;
+        if (this.elements.stepActionBtn) this.elements.stepActionBtn.innerHTML = `<span class="btn-ico">${icon('play')}</span>${step.actionText}`;
 
         if (this.elements.progressText) {
             this.elements.progressText.textContent = `Step ${this.currentStepIndex + 1} of ${this.currentLesson.steps.length}`;
@@ -202,7 +204,9 @@ export default class LessonManager {
 
         if (this.elements.completeBtn) {
             const isDone = this.completedLessons.includes(this.currentLesson.id);
-            this.elements.completeBtn.textContent = isDone ? '✅ Completed' : 'Mark as Complete';
+            this.elements.completeBtn.innerHTML = isDone
+                ? `<span class="btn-ico">${icon('check')}</span>Completed`
+                : 'Mark as Complete';
         }
     }
 }

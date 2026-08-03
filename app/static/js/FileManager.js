@@ -80,21 +80,20 @@ export default class FileManager {
             // Render Report
             const report = document.createElement('div');
             report.className = 'history-item advanced-report';
-            report.style.borderLeft = '4px solid var(--primary)';
             report.innerHTML = `
-                <div class="report-header" style="margin-bottom: 10px;">
-                    <strong style="color: var(--primary);">DSP Analysis: ${file.name}</strong>
-                    <p style="font-size: 0.8rem; color: var(--text-muted);">${uniqueTranscription.length} nodes detected across ${audioBuffer.duration.toFixed(1)}s</p>
+                <div class="report-header">
+                    <strong class="report-title">DSP Analysis: ${file.name}</strong>
+                    <p class="report-meta">${uniqueTranscription.length} nodes detected across ${audioBuffer.duration.toFixed(1)}s</p>
                 </div>
-                <div class="transcription-timeline" style="display: flex; gap: 4px; overflow-x: auto; padding: 10px 0; border-top: 1px solid var(--glass-border);">
+                <div class="transcription-timeline">
                     ${uniqueTranscription.map(t => `
-                        <div class="timeline-node" style="padding: 4px 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 4px; min-width: 50px; text-align: center;">
-                            <div style="color: var(--primary); font-weight: 800;">${t.note.replace(/[0-9]/g, '')}</div>
-                            <div style="font-size: 0.6rem; color: var(--text-muted);">${t.time.toFixed(1)}s</div>
+                        <div class="timeline-node">
+                            <div class="timeline-note">${t.note.replace(/[0-9]/g, '')}</div>
+                            <div class="timeline-time">${t.time.toFixed(1)}s</div>
                         </div>
                     `).join('')}
                 </div>
-                <div style="margin-top: 10px;">
+                <div class="report-actions">
                     <button class="primary-btn small-btn" onclick="window.AhordianApp.playSequence(${JSON.stringify(uniqueTranscription.map(t => t.note.replace(/[0-9]/g, ''))).replace(/"/g, '&quot;')})">Play Transcribed Riff</button>
                     <button class="secondary-btn small-btn" onclick="window.AhordianApp.loadTranscriptionToTape(${JSON.stringify(uniqueTranscription.map(t => t.note.replace(/[0-9]/g, ''))).replace(/"/g, '&quot;')})">Send to Tape</button>
                 </div>

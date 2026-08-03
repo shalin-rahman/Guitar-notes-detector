@@ -40,9 +40,9 @@ export default class TrackingManager {
         if (this.last10Buffer.length > 10) this.last10Buffer.shift();
         
         this.elements.last10List.innerHTML = this.last10Buffer.map(e => `
-            <span style="background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid var(--glass-border);">
-                <strong style="color:var(--primary)">${e.n}</strong> 
-                <span style="color:#fbbf24">[${e.s}]</span>
+            <span class="last10-chip">
+                <strong class="last10-note">${e.n}</strong>
+                <span class="last10-string">[${e.s}]</span>
             </span>`).join('');
     }
 

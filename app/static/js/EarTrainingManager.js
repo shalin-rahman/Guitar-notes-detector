@@ -1,5 +1,6 @@
 import AppConfig from './AppConfig.js';
 import { AudioSessionType } from './audio/AudioSessionManager.js';
+import { icon } from './Icons.js';
 
 /**
  * EarTrainingManager
@@ -148,7 +149,7 @@ export default class EarTrainingManager {
 
         this._intervalNotes = [baseNote, targetNote];
 
-        if (this.els.question) this.els.question.textContent = '🎵 What interval is this?';
+        if (this.els.question) this.els.question.innerHTML = `<span class="btn-ico">${icon('note')}</span>What interval is this?`;
         this.renderChoices(this.currentChoices.map(c => c.name));
         this.playCurrentQuestion();
     }
@@ -169,7 +170,7 @@ export default class EarTrainingManager {
             return AppConfig.NOTE_NAMES[noteIdx] + '3';
         });
 
-        if (this.els.question) this.els.question.textContent = '🎹 What chord quality is this?';
+        if (this.els.question) this.els.question.innerHTML = `<span class="btn-ico">${icon('piano')}</span>What chord quality is this?`;
         this.renderChoices(this.currentChoices.map(c => c.label));
         this.playCurrentQuestion();
     }
@@ -186,7 +187,7 @@ export default class EarTrainingManager {
             .sort(() => Math.random() - 0.5).slice(0, 3);
         this.currentChoices = [...others, this.currentAnswer].sort(() => Math.random() - 0.5);
 
-        if (this.els.question) this.els.question.textContent = '👂 What note do you hear?';
+        if (this.els.question) this.els.question.innerHTML = `<span class="btn-ico">${icon('ear')}</span>What note do you hear?`;
         this.renderChoices(this.currentChoices);
         this.playCurrentQuestion();
     }
@@ -218,7 +219,7 @@ export default class EarTrainingManager {
             if (this.streak > this.bestStreak) this.bestStreak = this.streak;
             btn.classList.add('correct');
             if (this.els.feedback) {
-                this.els.feedback.textContent = `✅ Correct! +${10 + ((this.streak - 1) * 2)} pts${this.streak > 1 ? ` 🔥 ${this.streak} streak!` : ''}`;
+                this.els.feedback.innerHTML = `<span class="btn-ico">${icon('check')}</span>Correct! +${10 + ((this.streak - 1) * 2)} pts${this.streak > 1 ? ` &middot; ${this.streak} streak!` : ''}`;
                 this.els.feedback.className = 'ear-feedback correct';
             }
         } else {
@@ -229,7 +230,7 @@ export default class EarTrainingManager {
                 if (b.textContent === this.currentAnswer) b.classList.add('correct');
             });
             if (this.els.feedback) {
-                this.els.feedback.textContent = `❌ Wrong. Correct answer: ${this.currentAnswer}`;
+                this.els.feedback.innerHTML = `<span class="btn-ico">${icon('cross')}</span>Wrong. Correct answer: ${this.currentAnswer}`;
                 this.els.feedback.className = 'ear-feedback wrong';
             }
         }
