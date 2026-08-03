@@ -43,11 +43,6 @@ app.add_middleware(NoCacheMiddleware)
 static_path = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
-@app.get("/", response_class=HTMLResponse)
-async def get_index():
-    with open(os.path.join(static_path, "index.html"), "r", encoding="utf-8") as f:
-        return f.read()
-
 @app.post("/analyze")
 async def analyze_file(request: Request, file: UploadFile = File(...)):
     """Analyze an uploaded audio file and return detected notes"""
@@ -87,6 +82,11 @@ async def analyze_file(request: Request, file: UploadFile = File(...)):
             os.remove(temp_path)
             logger.info("Temporary binary destroyed securely.")
 
+# Mount root static handler for html and assets
+app.mount("/", StaticFiles(directory=static_path, html=True), name="root_static")
+
+
 if __name__ == "__main__":
     print("Starting Ahordian on http://localhost:8000")
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
