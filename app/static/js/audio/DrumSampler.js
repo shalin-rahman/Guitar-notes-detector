@@ -1,7 +1,8 @@
 export default class DrumSampler {
-    constructor(audioContext, sampleManager) {
+    constructor(audioContext, sampleManager, destinationNode) {
         this.ctx = audioContext;
         this.sampleManager = sampleManager;
+        this.destinationNode = destinationNode;
         
         this.sampleMap = {
             'kick': './audio/drums/kick/kick-acoustic01.wav',
@@ -16,14 +17,14 @@ export default class DrumSampler {
         await this.sampleManager.loadSamplePack(this.sampleMap);
     }
 
-    scheduleDrumHit(drumType, startTime, velocity = 0.8, destinationNode) {
-        if (!this.ctx) return;
+    scheduleDrumHit(drumType, startTime, velocity = 0.8) {
+        if (!this.ctx || !this.destinationNode) return;
         
         const buffer = this.sampleManager.getBuffer(drumType);
         
         if (!buffer) {
             // Fallback: simple synthesized drums if samples aren't loaded
-            this.playSynthDrum(drumType, startTime, velocity, destinationNode);
+            this.playSynthDrum(drumType, startTime, velocity);
             return;
         }
 
@@ -34,18 +35,18 @@ export default class DrumSampler {
         gainNode.gain.setValueAtTime(velocity, startTime);
         
         source.connect(gainNode);
-        gainNode.connect(destinationNode);
+        gainNode.connect(this.destinationNode);
         
         source.start(startTime);
     }
     
-    playSynthDrum(drumType, startTime, velocity, destinationNode) {
+    playSynthDrum(drumType, startTime, velocity) {
         // Basic synthesized fallback
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         
         osc.connect(gain);
-        gain.connect(destinationNode);
+        gain.connect(this.destinationNode);
         
         if (drumType === 'kick') {
             osc.frequency.setValueAtTime(150, startTime);

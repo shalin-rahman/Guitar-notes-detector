@@ -11,7 +11,6 @@ export default class SampleManager {
         this.ctx = audioContext;
         this.buffers = new Map();
         this.status = SampleStatus.IDLE;
-        
         this.onStatusChange = null;
     }
     

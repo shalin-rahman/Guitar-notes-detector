@@ -19,10 +19,12 @@ import AudioSessionManager, { AudioSessionType } from './audio/AudioSessionManag
 import SampleManager from './audio/SampleManager.js';
 import DrumSampler from './audio/DrumSampler.js';
 import RhythmEngine from './audio/RhythmEngine.js';
+import { Icons } from './Icons.js';
 
 class App {
     constructor() {
         this.metronome = new Metronome();
+        this.initIcons();
         
         this.isStarted = false;
         this.animationId = null;
@@ -31,6 +33,7 @@ class App {
         this.analyser = null;
         this.lastDetectedNote = null;
         this.sequenceAbortFlag = false;
+        this.jamBpm = 120;
 
         this.elements = {
             startBtn: document.getElementById('start-btn'),
@@ -65,7 +68,6 @@ class App {
             toggleOverlay: document.getElementById('toggle-overlay'),
             displayIntervalsToggle: document.getElementById('display-intervals-toggle'),
             clearOverlayBtn: document.getElementById('clear-overlay-btn'),
-            soundToggle: document.getElementById('sound-toggle'),
             sequenceTape: document.getElementById('sequence-tape'),
             
             // Music Theory Panel
@@ -111,10 +113,28 @@ class App {
             jamProgression: document.getElementById('jam-progression'),
             jamKey: document.getElementById('jam-key'),
             jamSoloMode: document.getElementById('jam-solo-mode'),
-            liveChordIndicator: document.getElementById('live-chord-indicator')
+            liveChordIndicator: document.getElementById('live-chord-indicator'),
+            jamBpmSlider: document.getElementById('jam-bpm'),
+            jamBpmLabel: document.getElementById('jam-bpm-label'),
+            jamGuitarVol: document.getElementById('jam-guitar-vol'),
+            jamDrumsVol: document.getElementById('jam-drums-vol'),
+            
+            // Global Audio
+            globalMuteBtn: document.getElementById('global-mute-btn'),
+            masterVol: document.getElementById('master-volume'),
+            nowPlayingPill: document.getElementById('now-playing-pill'),
+            nowPlayingLabel: document.getElementById('now-playing-label'),
+            nowPlayingGoto: document.getElementById('now-playing-goto'),
+            
+            // Detection History
+            replayHistoryBtn: document.getElementById('replay-history-btn'),
+            
+            muteIconOn: document.getElementById('mute-icon-on'),
+            muteIconOff: document.getElementById('mute-icon-off')
         };
 
         this.tapeBuffer = [];
+        this.detectionHistory = []; // max 64 items
         this.isCapturing = false;
         this.captureBuffer = []; // Stability buffer for audio capture
         this.lastCapturedNote = null;
@@ -145,13 +165,36 @@ class App {
         this.elements.stopBtn.addEventListener('click', this.stop.bind(this));
         this.elements.saveBtn.addEventListener('click', () => this.tracker.exportLog());
 
-        this.elements.soundToggle.addEventListener('click', () => {
-            if (!this.player) this.initAudioContext();
-            const isMuted = !this.player.isMuted;
-            this.player.setMuted(isMuted);
-            this.elements.soundToggle.classList.toggle('muted', isMuted);
-            this.elements.soundToggle.querySelector('.speaker-icon').textContent = isMuted ? '🔇' : '🔊';
-        });
+        if (this.elements.globalMuteBtn) {
+            this.elements.globalMuteBtn.addEventListener('click', () => {
+                if (!this.sessionManager) this.initAudioContext();
+                const isMuted = this.sessionManager.toggleMute();
+                this.elements.globalMuteBtn.classList.toggle('muted', isMuted);
+                if (this.elements.muteIconOn) this.elements.muteIconOn.style.display = isMuted ? 'none' : 'block';
+                if (this.elements.muteIconOff) this.elements.muteIconOff.style.display = isMuted ? 'block' : 'none';
+            });
+        }
+        
+        if (this.elements.masterVol) {
+            this.elements.masterVol.addEventListener('input', (e) => {
+                if (!this.sessionManager) this.initAudioContext();
+                this.sessionManager.setMasterVolume(parseFloat(e.target.value));
+            });
+        }
+        
+        if (this.elements.replayHistoryBtn) {
+            this.elements.replayHistoryBtn.addEventListener('click', () => this.replayDetection());
+        }
+        
+        if (this.elements.nowPlayingGoto) {
+            this.elements.nowPlayingGoto.addEventListener('click', () => {
+                const targetId = this.elements.nowPlayingGoto.dataset.targetScreen;
+                if (targetId) {
+                    const btn = Array.from(this.elements.navBtns).find(b => b.dataset.target === targetId);
+                    if (btn) btn.click();
+                }
+            });
+        }
 
         this.elements.tuningSelect.addEventListener('change', (e) => {
             const tuning = AppConfig.ALTERNATE_TUNINGS.find(t => t.name === e.target.value);
@@ -292,7 +335,7 @@ class App {
                 const progId = this.elements.jamProgression.value;
                 const key = this.elements.jamKey.value;
                 
-                this.backingEngine.setBpm(this.metronome.bpm || 120);
+                this.backingEngine.setBpm(this.jamBpm);
                 this.backingEngine.setProgression(progId, key);
                 this.backingEngine.start();
                 
@@ -310,6 +353,27 @@ class App {
                 this.elements.liveChordIndicator.style.display = 'none';
                 this.elements.liveChordIndicator.textContent = '--';
                 this.fretboard.clearOverlay();
+            });
+        }
+        
+        if (this.elements.jamBpmSlider) {
+            this.elements.jamBpmSlider.addEventListener('input', (e) => {
+                const bpm = parseInt(e.target.value);
+                this.jamBpm = bpm;
+                if (this.elements.jamBpmLabel) this.elements.jamBpmLabel.textContent = bpm + ' BPM';
+                if (this.backingEngine) this.backingEngine.setBpm(bpm);
+            });
+        }
+        
+        if (this.elements.jamGuitarVol) {
+            this.elements.jamGuitarVol.addEventListener('input', (e) => {
+                if (this.sessionManager) this.sessionManager.setInstrumentVolume('guitar', parseFloat(e.target.value));
+            });
+        }
+        
+        if (this.elements.jamDrumsVol) {
+            this.elements.jamDrumsVol.addEventListener('input', (e) => {
+                if (this.sessionManager) this.sessionManager.setInstrumentVolume('drums', parseFloat(e.target.value));
             });
         }
         
@@ -782,6 +846,39 @@ class App {
         this.updateTape(-1);
     }
 
+    async replayDetection() {
+        if (!this.detectionHistory || this.detectionHistory.length === 0) return;
+        this.initAudioContext();
+
+        const btn = this.elements.replayHistoryBtn;
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '▶ Replaying...';
+        }
+
+        // Navigate to fretboard screen for visual replay
+        const fbBtn = Array.from(this.elements.navBtns).find(b => b.dataset.target === 'fretboard-screen');
+        if (fbBtn) fbBtn.click();
+
+        const noteDuration = 500; // ms per note highlight
+
+        for (let i = 0; i < this.detectionHistory.length; i++) {
+            const note = this.detectionHistory[i];
+            // Visual highlight on fretboard
+            if (this.fretboard) this.fretboard.showNote(note);
+            // Audio playback via existing triggerFretboardNote
+            this.triggerFretboardNote(note, noteDuration);
+            await new Promise(r => setTimeout(r, noteDuration));
+        }
+
+        // Clear fretboard and restore button
+        if (this.fretboard) this.fretboard.clearOverlay();
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = `Replay (${this.detectionHistory.length})`;
+        }
+    }
+
     initAudioContext() {
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -790,16 +887,52 @@ class App {
             
             this.player = new AudioPlayer(this.sessionManager, this.sampleManager);
             this.player.onStateChange = (isPlaying) => {
-                this.elements.soundToggle.classList.toggle('playing', isPlaying);
+                // We no longer toggle visual on soundToggle since it was removed
             };
             
-            this.drumSampler = new DrumSampler(this.audioContext, this.sampleManager);
+            this.drumSampler = new DrumSampler(this.audioContext, this.sampleManager, this.sessionManager.getInstrumentDestination('drums'));
             this.rhythmEngine = new RhythmEngine(this.drumSampler);
             
             // If BackingTrackEngine was already created before audioContext, update it
             if (this.backingEngine) {
                 this.backingEngine.rhythmEngine = this.rhythmEngine;
             }
+            
+            this.sessionManager.onStateChangeCallback = (state) => {
+                if (state.active) {
+                    if (this.elements.nowPlayingPill) this.elements.nowPlayingPill.style.display = 'flex';
+                    if (this.elements.nowPlayingLabel) this.elements.nowPlayingLabel.textContent = '▶ ' + state.label;
+                    if (this.elements.nowPlayingGoto) this.elements.nowPlayingGoto.dataset.targetScreen = state.screen;
+                } else {
+                    if (this.elements.nowPlayingPill) this.elements.nowPlayingPill.style.display = 'none';
+                }
+            };
+            
+            this.sampleManager.onStatusChange = (status) => {
+                const indicator = document.getElementById('sample-status-indicator');
+                if (!indicator) return;
+                
+                if (status === 'loading') {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('span').textContent = 'Loading Audio...';
+                    indicator.querySelector('svg').style.display = 'block';
+                    indicator.style.color = 'var(--text-muted)';
+                } else if (status === 'partial') {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('span').textContent = 'Audio Partially Loaded';
+                    indicator.querySelector('svg').style.display = 'none';
+                    indicator.style.color = '#ffaa00';
+                    setTimeout(() => indicator.style.display = 'none', 4000);
+                } else if (status === 'error') {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('span').textContent = 'Audio Load Error (Using Synth)';
+                    indicator.querySelector('svg').style.display = 'none';
+                    indicator.style.color = '#ff4444';
+                    setTimeout(() => indicator.style.display = 'none', 4000);
+                } else {
+                    indicator.style.display = 'none';
+                }
+            };
             
             // Kick off sample loading
             this.player.loadSamples();
@@ -1062,6 +1195,14 @@ class App {
                     if (this.lastDetectedNote !== noteData.name) {
                         this.lastDetectedNote = noteData.name;
                         this.fretboard.showNote(noteData.name);
+                        
+                        this.detectionHistory.push(noteData.name);
+                        if (this.detectionHistory.length > 64) {
+                            this.detectionHistory.shift();
+                        }
+                        if (this.elements.replayHistoryBtn) {
+                            this.elements.replayHistoryBtn.disabled = false;
+                        }
                         
                         // Notify CircleManager for possible Quiz validation
                         if (this.circleManager) {

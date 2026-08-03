@@ -161,8 +161,8 @@ export default class BackingTrackEngine {
 
     scheduleTick(tickIndex, measureNumber, time) {
         // Trigger drums on every 16th note tick
-        if (this.rhythmEngine && this.player.sessionManager) {
-            this.rhythmEngine.playTick(this.activeProgression.style, tickIndex, time, this.player.sessionManager.getDestination());
+        if (this.rhythmEngine) {
+            this.rhythmEngine.playTick(this.activeProgression.style, tickIndex, time);
         }
 
         // Chords usually play on quarter notes (tickIndex % 4 === 0)
@@ -247,13 +247,14 @@ export default class BackingTrackEngine {
         
         const isMinor = numeral === numeral.toLowerCase();
         
-        if (numeral.toLowerCase().startsWith("i")) offset = 0;
-        if (numeral.toLowerCase().startsWith("ii")) offset = 2;
-        if (numeral.toLowerCase().startsWith("iii")) offset = 4;
-        if (numeral.toLowerCase().startsWith("iv")) offset = 5;
-        if (numeral.toLowerCase().startsWith("v")) offset = 7;
-        if (numeral.toLowerCase().startsWith("vi")) offset = 9;
-        if (numeral.toLowerCase().startsWith("vii")) offset = 11;
+        const lowerNum = numeral.toLowerCase();
+        if      (lowerNum.startsWith("vii")) offset = 11;
+        else if (lowerNum.startsWith("vi"))  offset = 9;
+        else if (lowerNum.startsWith("v"))   offset = 7;
+        else if (lowerNum.startsWith("iv"))  offset = 5;
+        else if (lowerNum.startsWith("iii")) offset = 4;
+        else if (lowerNum.startsWith("ii"))  offset = 2;
+        else if (lowerNum.startsWith("i"))   offset = 0;
         
         const noteIdx = (rootIdx + offset) % 12;
         const rootNote = AppConfig.NOTE_NAMES[noteIdx];

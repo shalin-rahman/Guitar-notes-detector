@@ -1,5 +1,4 @@
 import GuitarSynthFallback from './GuitarSynthFallback.js';
-import AppConfig from '../AppConfig.js';
 
 export default class GuitarSampler {
     constructor(audioContext, sampleManager) {

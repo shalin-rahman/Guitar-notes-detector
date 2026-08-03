@@ -55,9 +55,8 @@ export default class Metronome {
             osc.type = 'sine';
             envelope.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
         }
-
         osc.connect(envelope);
-        envelope.connect(this.sessionManager.getDestination());
+        envelope.connect(this.sessionManager.getInstrumentDestination('metronome'));
 
         osc.start(time);
         osc.stop(time + 0.1);

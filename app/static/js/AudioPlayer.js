@@ -84,8 +84,7 @@ export default class AudioPlayer {
             // Real samples just go straight through the envelope
             source.connect(masterGain);
         }
-        
-        masterGain.connect(this.sessionManager.getDestination());
+        masterGain.connect(this.sessionManager.getInstrumentDestination('guitar'));
 
         source.start(startTime);
         source.stop(startTime + duration + 0.1);
