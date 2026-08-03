@@ -74,7 +74,7 @@ export default class Metronome {
         this.isPlaying = true;
         
         if (this.sessionManager) {
-            this.sessionManager.startSession(AudioSessionType.METRONOME);
+            this.sessionManager.startSession(AudioSessionType.METRONOME, { exclusive: true });
         }
         
         this.currentTick = 0;

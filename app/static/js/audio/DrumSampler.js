@@ -71,6 +71,25 @@ export default class DrumSampler {
             gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.05);
             osc.start(startTime);
             osc.stop(startTime + 0.05);
+        } else if (drumType === 'hihat-open') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(7000, startTime);
+            gain.gain.setValueAtTime(velocity * 0.45, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+            osc.start(startTime);
+            osc.stop(startTime + 0.3);
+        } else if (drumType === 'ride') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(5200, startTime);
+            gain.gain.setValueAtTime(velocity * 0.35, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+            osc.start(startTime);
+            osc.stop(startTime + 0.5);
+        } else {
+            // Unknown voice: tear down the nodes we just built rather than
+            // leaving an unstarted oscillator connected to the graph.
+            osc.disconnect();
+            gain.disconnect();
         }
     }
 }

@@ -5,13 +5,19 @@ export const AudioSessionType = {
     NOTE_PREVIEW: { id: "note-preview", label: "Note Preview", screen: "tools-screen" },
     TRANSCRIPTION: { id: "transcription", label: "Transcription", screen: "detector-screen" },
     ANALYSIS: { id: "analysis", label: "Audio Analysis", screen: "tools-screen" },
-    TAB_PLAYER: { id: "tab-player", label: "Tab Player", screen: "tab-player-screen" }
+    TAB_PLAYER: { id: "tab-player", label: "Tab Player", screen: "tab-player-screen" },
+    REPLAY: { id: "replay", label: "Detection Replay", screen: "fretboard-screen" }
 };
 
 export default class AudioSessionManager {
     constructor(audioContext) {
         this.ctx = audioContext;
         this.activeSessions = new Set();
+
+        // sessionType -> stop callback. Lets exclusivity actually silence engines
+        // instead of only clearing session state.
+        this.stopHandlers = new Map();
+        this._sweeping = false;
         
         // Master routing architecture
         this.masterGain = this.ctx.createGain();
@@ -78,26 +84,60 @@ export default class AudioSessionManager {
         return this.isMuted;
     }
 
+    registerStopHandler(sessionTypeObj, fn) {
+        this.stopHandlers.set(sessionTypeObj, fn);
+    }
+
+    /**
+     * Stops and clears every active session except `keep`.
+     * Handlers call engine.stop(), which re-enters stopSession() -> notifyStateChange(),
+     * so notifications are suppressed for the duration and fired once by the caller.
+     * Iterates a snapshot: handlers mutate activeSessions.
+     */
+    _sweep(keep = null) {
+        const doomed = Array.from(this.activeSessions).filter(s => s !== keep);
+        if (doomed.length === 0) return;
+
+        this._sweeping = true;
+        try {
+            for (const session of doomed) {
+                const handler = this.stopHandlers.get(session);
+                if (handler) {
+                    // One misbehaving engine must not leave the rest playing.
+                    try {
+                        handler();
+                    } catch (err) {
+                        console.warn(`AudioSessionManager: stop handler for "${session.id}" threw:`, err);
+                    }
+                }
+                this.activeSessions.delete(session);
+            }
+        } finally {
+            this._sweeping = false;
+        }
+    }
+
     startSession(sessionTypeObj, options = { exclusive: false }) {
         if (options.exclusive) {
-            this.activeSessions.clear();
+            this._sweep(sessionTypeObj);
         }
         this.activeSessions.add(sessionTypeObj);
-        
+
         // Resume context if suspended
         if (this.ctx.state === 'suspended') {
             this.ctx.resume();
         }
-        
+
         this.notifyStateChange();
     }
-    
+
     stopSession(sessionTypeObj) {
         this.activeSessions.delete(sessionTypeObj);
         this.notifyStateChange();
     }
-    
+
     stopAll() {
+        this._sweep(null);
         this.activeSessions.clear();
         this.notifyStateChange();
     }
@@ -124,6 +164,7 @@ export default class AudioSessionManager {
     }
 
     notifyStateChange() {
+        if (this._sweeping) return; // coalesced into the caller's single notification
         if (this.onStateChangeCallback) {
             this.onStateChangeCallback(this.getActiveState());
         }

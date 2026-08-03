@@ -1,16 +1,20 @@
 import os
 import urllib.request
+from pathlib import Path
+
+# Resolve against this file, not the cwd, so the script can be run from anywhere.
+BASE_DIR = Path(__file__).resolve().parent
 
 # Define sources
 guitar_url_base = "https://raw.githubusercontent.com/gleitz/midi-js-soundfonts/master/FatBoy/acoustic_guitar_nylon-mp3/"
 
 samples = {
-    "static/audio/guitar/acoustic/E2.mp3": guitar_url_base + "E2.mp3",
-    "static/audio/guitar/acoustic/A2.mp3": guitar_url_base + "A2.mp3",
-    "static/audio/guitar/acoustic/D3.mp3": guitar_url_base + "D3.mp3",
-    "static/audio/guitar/acoustic/G3.mp3": guitar_url_base + "G3.mp3",
-    "static/audio/guitar/acoustic/B3.mp3": guitar_url_base + "B3.mp3",
-    "static/audio/guitar/acoustic/E4.mp3": guitar_url_base + "E4.mp3"
+    BASE_DIR / "static/audio/guitar/acoustic/E2.mp3": guitar_url_base + "E2.mp3",
+    BASE_DIR / "static/audio/guitar/acoustic/A2.mp3": guitar_url_base + "A2.mp3",
+    BASE_DIR / "static/audio/guitar/acoustic/D3.mp3": guitar_url_base + "D3.mp3",
+    BASE_DIR / "static/audio/guitar/acoustic/G3.mp3": guitar_url_base + "G3.mp3",
+    BASE_DIR / "static/audio/guitar/acoustic/B3.mp3": guitar_url_base + "B3.mp3",
+    BASE_DIR / "static/audio/guitar/acoustic/E4.mp3": guitar_url_base + "E4.mp3"
 }
 
 def main():

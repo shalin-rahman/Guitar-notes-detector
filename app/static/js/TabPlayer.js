@@ -1,3 +1,5 @@
+import { AudioSessionType } from './audio/AudioSessionManager.js';
+
 export const SONG_TABS = [
     {
         id: 'song-1',
@@ -138,6 +140,10 @@ export default class TabPlayer {
         this.isPlaying = true;
         this.currentNoteIndex = 0;
 
+        if (this.app.sessionManager) {
+            this.app.sessionManager.startSession(AudioSessionType.TAB_PLAYER, { exclusive: true });
+        }
+
         if (this.elements.playBtn) this.elements.playBtn.disabled = true;
         if (this.elements.stopBtn) this.elements.stopBtn.disabled = false;
 
@@ -180,6 +186,10 @@ export default class TabPlayer {
         this.isPlaying = false;
         if (this.timer) clearTimeout(this.timer);
         this.currentNoteIndex = -1;
+
+        if (this.app.sessionManager) {
+            this.app.sessionManager.stopSession(AudioSessionType.TAB_PLAYER);
+        }
 
         if (this.elements.playBtn) this.elements.playBtn.disabled = false;
         if (this.elements.stopBtn) this.elements.stopBtn.disabled = true;

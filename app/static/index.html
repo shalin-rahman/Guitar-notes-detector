@@ -214,7 +214,7 @@
                             <label for="sa-symbols">Sargam Notation Map:</label>
                             <input type="text" id="sa-symbols" class="styled-input mono" value="S, S', R, R', G, M, M', P, P', D, D', N">
                         </div>
-                        <div id="drop-zone" class="drop-zone-module">Drag & Drop Audio File to Analyze Server-Side</div>
+                        <div id="drop-zone" class="drop-zone-module">Drag & Drop Audio File to Analyze Locally</div>
                     </section>
                 </div>
             </main>
@@ -383,6 +383,9 @@
                             <label class="checkbox-label compact"><input type="checkbox" id="display-intervals-toggle"> Intervals</label>
                             <label class="checkbox-label compact"><input type="checkbox" id="toggle-overlay"> Overlay</label>
                             <button id="clear-overlay-btn" class="secondary-btn small-btn">Clear</button>
+                            <!-- Replay is launched from the Detector screen but plays out here, so the
+                                 cancel affordance has to live on this screen too. Shown only while replaying. -->
+                            <button id="fb-stop-replay-btn" class="secondary-btn small-btn" style="display: none;">■ Stop Replay</button>
                         </div>
                     </div>
 

@@ -32,6 +32,9 @@ class App {
         this.analyser = null;
         this.lastDetectedNote = null;
         this.sequenceAbortFlag = false;
+        this.isReplaying = false;
+        this.replayAbortFlag = false;
+        this._replaySeq = 0;
         this.jamBpm = 120;
 
         this.elements = {
@@ -171,6 +174,22 @@ class App {
         });
     }
 
+    /**
+     * Switches the visible screen and syncs nav highlighting.
+     * Deliberately does NOT touch audio — callers that need audio torn down do it
+     * themselves. This lets replay navigate to the fretboard without stopping
+     * the very audio it is about to use.
+     */
+    showScreen(target) {
+        this.elements.screens.forEach(s => s.classList.remove('active'));
+        const targetScreen = document.getElementById(target);
+        if (targetScreen) targetScreen.classList.add('active');
+
+        this.elements.navBtns.forEach(b => {
+            b.classList.toggle('active', b.getAttribute('data-target') === target);
+        });
+    }
+
     bindEvents() {
         this.elements.startBtn.addEventListener('click', this.start.bind(this));
         this.elements.stopBtn.addEventListener('click', this.stop.bind(this));
@@ -195,6 +214,12 @@ class App {
         
         if (this.elements.replayHistoryBtn) {
             this.elements.replayHistoryBtn.addEventListener('click', () => this.replayDetection());
+        }
+
+        // Same toggle, reachable from the fretboard screen the replay navigates to.
+        this.elements.fbStopReplayBtn = document.getElementById('fb-stop-replay-btn');
+        if (this.elements.fbStopReplayBtn) {
+            this.elements.fbStopReplayBtn.addEventListener('click', () => this.abortReplay());
         }
         
         if (this.elements.nowPlayingGoto) {
@@ -226,19 +251,15 @@ class App {
         this.elements.navBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const target = btn.getAttribute('data-target');
-                this.elements.screens.forEach(s => s.classList.remove('active'));
-                const targetScreen = document.getElementById(target);
-                if(targetScreen) targetScreen.classList.add('active');
-                
-                this.elements.navBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
+                this.showScreen(target);
+
                 // Stop active audio on navigation
+                this.abortReplay();
                 if (this.backingEngine) this.backingEngine.stop();
                 if (this.metronome) this.metronome.stop();
                 if (this.tabPlayer && typeof this.tabPlayer.stop === 'function') this.tabPlayer.stop();
                 if (this.sessionManager) this.sessionManager.stopAll();
-                
+
                 if (target === 'home-screen') this.updateDashboard();
                 
                 // Lazy-init Ear Training on first visit
@@ -857,36 +878,106 @@ class App {
         this.updateTape(-1);
     }
 
+    /** Cancels an in-flight replay. Safe to call when none is running. */
+    abortReplay() {
+        if (!this.isReplaying) return;
+        this.replayAbortFlag = true;
+        // Cut the current inter-note wait short so the stop is felt immediately
+        // instead of at the next note boundary (up to MAX_GAP away).
+        if (this._replayWake) this._replayWake();
+    }
+
+    _resetReplayButton() {
+        const btn = this.elements.replayHistoryBtn;
+        if (!btn) return;
+        const n = this.detectionHistory ? this.detectionHistory.length : 0;
+        btn.disabled = n === 0;
+        btn.textContent = n > 0 ? `Replay (${n})` : 'Replay (64 max)';
+        if (this.elements.fbStopReplayBtn) this.elements.fbStopReplayBtn.style.display = 'none';
+    }
+
+    /**
+     * Replays the detected note history, preserving the rhythm it was played in.
+     * Acts as a toggle: invoking it during a replay stops that replay.
+     */
     async replayDetection() {
+        // Second click = stop.
+        if (this.isReplaying) {
+            this.abortReplay();
+            return;
+        }
         if (!this.detectionHistory || this.detectionHistory.length === 0) return;
+
         this.initAudioContext();
+
+        const DEFAULT_GAP = 500;  // fallback when timing is unavailable
+        const MIN_GAP = 80;       // keeps fast runs audible as distinct notes
+        const MAX_GAP = 1200;     // stops a long pause replaying verbatim
+
+        // History entries are {note, t}, but may be bare strings if they were
+        // recorded before timing was tracked. Normalise both shapes.
+        const entries = this.detectionHistory.map(e =>
+            typeof e === 'string' ? { note: e, t: null } : e
+        );
+
+        const replayId = ++this._replaySeq;
+        this.isReplaying = true;
+        this.replayAbortFlag = false;
 
         const btn = this.elements.replayHistoryBtn;
         if (btn) {
-            btn.disabled = true;
-            btn.textContent = '▶ Replaying...';
+            btn.disabled = false; // stays clickable so it can cancel
+            btn.textContent = '■ Stop';
+        }
+        if (this.elements.fbStopReplayBtn) this.elements.fbStopReplayBtn.style.display = '';
+
+        // Navigate without the nav handler's audio teardown.
+        this.showScreen('fretboard-screen');
+
+        if (this.sessionManager) {
+            this.sessionManager.startSession(AudioSessionType.REPLAY, { exclusive: true });
         }
 
-        // Navigate to fretboard screen for visual replay
-        const fbBtn = Array.from(this.elements.navBtns).find(b => b.dataset.target === 'fretboard-screen');
-        if (fbBtn) fbBtn.click();
+        try {
+            for (let i = 0; i < entries.length; i++) {
+                if (this.replayAbortFlag || this._replaySeq !== replayId) return;
 
-        const noteDuration = 500; // ms per note highlight
+                const { note, t } = entries[i];
 
-        for (let i = 0; i < this.detectionHistory.length; i++) {
-            const note = this.detectionHistory[i];
-            // Visual highlight on fretboard
-            if (this.fretboard) this.fretboard.showNote(note);
-            // Audio playback via existing triggerFretboardNote
-            this.triggerFretboardNote(note, noteDuration);
-            await new Promise(r => setTimeout(r, noteDuration));
-        }
+                // Gap to the NEXT note: the interval the user actually played.
+                const next = entries[i + 1];
+                let gap = DEFAULT_GAP;
+                if (t != null && next && next.t != null) {
+                    gap = Math.min(MAX_GAP, Math.max(MIN_GAP, next.t - t));
+                }
 
-        // Clear fretboard and restore button
-        if (this.fretboard) this.fretboard.clearOverlay();
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = `Replay (${this.detectionHistory.length})`;
+                if (this.fretboard) this.fretboard.showNote(note);
+                this.triggerFretboardNote(note, gap);
+
+                await new Promise(resolve => {
+                    const timer = setTimeout(finish, gap);
+                    function finish() {
+                        clearTimeout(timer);
+                        resolve();
+                    }
+                    this._replayWake = finish;
+                });
+                // Never clear a newer replay's waker if this one has been superseded.
+                if (this._replaySeq === replayId) this._replayWake = null;
+            }
+        } finally {
+            // Only the newest replay owns teardown; a superseded one must not
+            // clear the fretboard or relabel the button out from under it.
+            if (this._replaySeq === replayId) {
+                this.isReplaying = false;
+                this.replayAbortFlag = false;
+                this._replayWake = null;
+                if (this.fretboard) this.fretboard.clearOverlay();
+                this._resetReplayButton();
+                if (this.sessionManager) {
+                    this.sessionManager.stopSession(AudioSessionType.REPLAY);
+                }
+            }
         }
     }
 
@@ -909,6 +1000,25 @@ class App {
                 this.backingEngine.rhythmEngine = this.rhythmEngine;
             }
             
+            // Let exclusivity actually silence engines, not just clear session state.
+            // Late-bound closures: tabPlayer / earTraining are lazy-initialised on
+            // first visit to their screens, so method references would capture undefined.
+            this.sessionManager.registerStopHandler(AudioSessionType.METRONOME, () => {
+                if (this.metronome) this.metronome.stop();
+            });
+            this.sessionManager.registerStopHandler(AudioSessionType.JAM_TRACK, () => {
+                if (this.backingEngine) this.backingEngine.stop();
+            });
+            this.sessionManager.registerStopHandler(AudioSessionType.TAB_PLAYER, () => {
+                if (this.tabPlayer && typeof this.tabPlayer.stop === 'function') this.tabPlayer.stop();
+            });
+            this.sessionManager.registerStopHandler(AudioSessionType.EAR_TRAINING, () => {
+                if (this.earTraining && typeof this.earTraining.stop === 'function') this.earTraining.stop();
+            });
+            this.sessionManager.registerStopHandler(AudioSessionType.REPLAY, () => {
+                this.abortReplay();
+            });
+
             this.sessionManager.onStateChangeCallback = (state) => {
                 if (state.active) {
                     if (this.elements.nowPlayingPill) this.elements.nowPlayingPill.style.display = 'flex';
@@ -1207,12 +1317,13 @@ class App {
                         this.lastDetectedNote = noteData.name;
                         this.fretboard.showNote(noteData.name);
                         
-                        this.detectionHistory.push(noteData.name);
+                        // Timestamp each onset so replay can reproduce the rhythm.
+                        this.detectionHistory.push({ note: noteData.name, t: performance.now() });
                         if (this.detectionHistory.length > 64) {
                             this.detectionHistory.shift();
                         }
-                        if (this.elements.replayHistoryBtn) {
-                            this.elements.replayHistoryBtn.disabled = false;
+                        if (this.elements.replayHistoryBtn && !this.isReplaying) {
+                            this._resetReplayButton();
                         }
                         
                         // Notify CircleManager for possible Quiz validation

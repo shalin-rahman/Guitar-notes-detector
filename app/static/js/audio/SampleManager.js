@@ -37,24 +37,39 @@ export default class SampleManager {
         }
     }
     
+    /**
+     * Loads a pack of samples. Multiple packs (guitar, drums) are loaded concurrently
+     * against one manager, so progress is accumulated on the instance rather than
+     * per call — otherwise whichever pack finished last would overwrite the verdict
+     * and a fully-loaded guitar pack could report ERROR because drums 404'd.
+     */
     async loadSamplePack(packDefinition) {
-        this.setStatus(SampleStatus.LOADING);
-        
-        let loadedCount = 0;
         const total = Object.keys(packDefinition).length;
-        
+        if (total === 0) return;
+
+        this._expected = (this._expected || 0) + total;
+        this._loaded = this._loaded || 0;
+        this._pending = (this._pending || 0) + 1;
+
+        this.setStatus(SampleStatus.LOADING);
+
         const loadPromises = Object.entries(packDefinition).map(async ([key, url]) => {
             const success = await this.loadSample(key, url);
             if (success) {
-                loadedCount++;
+                // Safe without a lock: increments happen on the single JS thread.
+                this._loaded++;
             }
         });
-        
+
         await Promise.allSettled(loadPromises);
-        
-        if (loadedCount === total) {
+
+        this._pending--;
+        // Report only once every in-flight pack has settled.
+        if (this._pending > 0) return;
+
+        if (this._loaded === this._expected) {
             this.setStatus(SampleStatus.READY);
-        } else if (loadedCount > 0) {
+        } else if (this._loaded > 0) {
             this.setStatus(SampleStatus.PARTIAL);
         } else {
             this.setStatus(SampleStatus.ERROR);

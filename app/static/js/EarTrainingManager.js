@@ -1,4 +1,5 @@
 import AppConfig from './AppConfig.js';
+import { AudioSessionType } from './audio/AudioSessionManager.js';
 
 /**
  * EarTrainingManager
@@ -89,12 +90,21 @@ export default class EarTrainingManager {
         this.isActive = true;
         this.updateStats();
         this.setUIState(true);
+
+        if (this.app && this.app.sessionManager) {
+            this.app.sessionManager.startSession(AudioSessionType.EAR_TRAINING, { exclusive: true });
+        }
+
         this.nextQuestion();
     }
 
     stop() {
         this.isActive = false;
         this.setUIState(false);
+
+        if (this.app && this.app.sessionManager) {
+            this.app.sessionManager.stopSession(AudioSessionType.EAR_TRAINING);
+        }
         this.saveHighScores();
         if (this.els.question) this.els.question.textContent = 'Press Start to begin!';
         if (this.els.choices) this.els.choices.innerHTML = '';
