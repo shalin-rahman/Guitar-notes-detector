@@ -155,26 +155,34 @@ export default class CircleManager {
             });
         });
 
-        this.elements.playBtn.addEventListener('click', () => {
-            if (this.activeKeyIndex !== -1 && this.appRef) {
-                const k = this.keys[this.activeKeyIndex];
-                this.appRef.triggerScale(this.elements.scaleSelect.value, this.activeMode === 'major' ? k.maj : k.min);
-            }
-        });
+        if (this.elements.playBtn) {
+            this.elements.playBtn.addEventListener('click', () => {
+                if (this.activeKeyIndex !== -1 && this.appRef) {
+                    const k = this.keys[this.activeKeyIndex];
+                    this.appRef.triggerScale(this.elements.scaleSelect.value, this.activeMode === 'major' ? k.maj : k.min);
+                }
+            });
+        }
 
-        this.elements.intervalsToggle.addEventListener('change', (e) => {
-            if (this.appRef && this.appRef.fretboard) this.appRef.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
-        });
+        if (this.elements.intervalsToggle) {
+            this.elements.intervalsToggle.addEventListener('change', (e) => {
+                if (this.appRef && this.appRef.fretboard) this.appRef.fretboard.setDisplayMode(e.target.checked ? 'intervals' : 'notes');
+            });
+        }
 
-        this.elements.quizToggle.addEventListener('change', (e) => {
-            this.elements.quizModule.style.display = e.target.checked ? 'block' : 'none';
-            if (!e.target.checked) this.stopQuiz();
-        });
+        if (this.elements.quizToggle) {
+            this.elements.quizToggle.addEventListener('change', (e) => {
+                this.elements.quizModule.style.display = e.target.checked ? 'block' : 'none';
+                if (!e.target.checked) this.stopQuiz();
+            });
+        }
 
-        this.elements.quizStartBtn.addEventListener('click', () => {
-            if (this.quizActive) this.stopQuiz();
-            else this.startQuiz();
-        });
+        if (this.elements.quizStartBtn) {
+            this.elements.quizStartBtn.addEventListener('click', () => {
+                if (this.quizActive) this.stopQuiz();
+                else this.startQuiz();
+            });
+        }
 
         if (this.elements.extractPentaBtn) {
             this.elements.extractPentaBtn.addEventListener('click', () => this.extractPentatonic());
