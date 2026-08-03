@@ -1,31 +1,835 @@
-Ahordian Enhancement Roadmap - Professional Phase
-==============================================
+Bottom line
 
-[X] 1. Master Metronome Engine
-    - Precision audio tick (WebAudio)
-    - Visual pulse indicator in header
-    - Adjustable BPM and Time Signature (4/4, 3/4, 6/8)
+Do not implement the proposed plan as-is.
 
-[X] 2. Smart Live Transcription
-    - Map microphone input notes directly into the "Sequence Tape"
-    - Allow users to play a riff and have the app "Save" it as a playable sequence
-    - Add "Clear Tape" and "Export to Tabs" button
+A lot of the requested functionality is already partially implemented, especially the audio architecture and detection replay. The remaining work is mostly:
 
-[X] 3. Visual Chord Shapes (Voicing Library)
-    - Add a "Voicings" toggle to the Fretboard
-    - When a chord is selected (e.g., G Major), show standard Open/Bar shapes instead of just triad dots
-    - Support for major/minor barre chord types based on root position
+finish the UI wiring,
+fix a few broken/incomplete integrations,
+add the missing visual/UI features,
+add the real acoustic assets,
+test the audio lifecycle properly.
 
-[X] 4. Local File Analysis (DSP File Processing)
-    - Implement Drag & Drop logic for MP3/WAV
-    - Process audio chunks offline using the ACF PitchDetector
-    - Display a timeline of detected notes from the file
+The biggest correction is that Batch C should not modify AudioPlayer.js and DrumSampler.js for volume. The current AudioSessionManager already has dedicated guitar/drum gain nodes and setInstrumentVolume().
 
-[X] 5. Ear Training & Quiz Mode
-    - "Mystery Note" game: App plays a sound, user finds it on the neck
-    - "Diatonic Degree" Quiz: Find the "Perfect 4th of A#" within 3 seconds
+Current status against your plan
+Batch	Current state	Verdict
+A — Global controls	Audio backend already exists; UI missing	Finish integration
+B — SVG icons	Still emoji-based	Implement
+C — Jam UI	Basic UI exists; audio backend mostly ready	Expand UI + wire existing APIs
+D — Detection replay	Partially implemented but currently broken/incomplete	Fix, don't recreate
+E — User guide	Not present	Implement
+Acoustic samples	Sampler exists, assets appear absent	Must resolve
+Audio session exclusivity	State exists but actual previous audio isn't guaranteed to stop	Critical fix
+1. Batch A is already half implemented
 
-[X] 6. Final UI/UX Polishing
-    - Ensure 100vh full-fit across all tabs
-    - High-quality SVG animations for tab transitions
-    - Mobile-responsive adjustments for the Circle SVG
+Your plan says:
+
+Wire global-mute-btn to sessionManager.toggleMute()
+
+That backend already exists.
+
+AudioSessionManager currently has:
+
+setInstrumentVolume()
+setMasterVolume()
+toggleMute()
+startSession()
+stopSession()
+stopAll()
+getActiveState()
+onStateChangeCallback
+
+It also already has:
+
+masterGain
+compressor
+guitar gain
+drums gain
+metronome gain
+default gain
+
+and routes:
+
+Instrument
+ ↓
+Instrument Gain
+ ↓
+Master Gain
+ ↓
+Compressor
+ ↓
+Destination
+
+That's a solid foundation.
+
+And App.js already subscribes to state
+
+Current code already does:
+
+sessionManager.onStateChangeCallback
+        ↓
+nowPlayingPill
+nowPlayingLabel
+nowPlayingGoto
+
+So the proposed subscription isn't new work.
+
+What is actually missing
+
+The HTML currently has only:
+
+metronome controls
+microphone status
+
+There is no global mute button, master volume slider, or Now Playing pill in the topbar.
+
+Therefore Batch A should become:
+
+Batch A — Finish Global Audio UI
+
+index.html
+
+Add:
+
+[ 🔊 ] [ Master ─────── ] [ ▶ Jam Station ]
+
+with:
+
+global-mute-btn
+master-volume
+now-playing-pill
+now-playing-label
+now-playing-goto
+
+App.js
+
+Wire the existing APIs:
+
+global mute
+    → sessionManager.toggleMute()
+
+master volume
+    → sessionManager.setMasterVolume()
+
+Now Playing
+    ← existing onStateChangeCallback
+
+No new audio manager is required.
+
+2. There is a more important audio bug Batch A doesn't address
+
+This is the thing I would add to the plan.
+
+Currently:
+
+startSession(sessionType, { exclusive: true })
+
+does:
+
+activeSessions.clear()
+activeSessions.add(newSession)
+
+It does not actually stop the previous audio engine.
+
+Example:
+
+Metronome playing
+      ↓
+Start Jam
+      ↓
+AudioSessionManager clears "Metronome"
+      ↓
+Jam becomes active
+      ↓
+BUT Metronome may still be physically playing
+
+So the session state and actual audio can diverge.
+
+That's a real architectural bug.
+
+Fix this before calling Batch A complete.
+
+The manager should own stop callbacks:
+
+SessionManager
+
+METRONOME
+   → stop callback
+
+JAM_TRACK
+   → stop callback
+
+EAR_TRAINING
+   → stop callback
+
+TAB_PLAYER
+   → stop callback
+
+Then:
+
+startSession(JAM, exclusive)
+        ↓
+stop currently active sessions
+        ↓
+clear session state
+        ↓
+start Jam
+
+This makes your original requirement:
+
+"override if any other is played"
+
+actually true.
+
+3. Batch B is still completely valid
+
+The current sidebar still uses emoji icons:
+
+🏠 Home
+🎙️ Tuner
+🧰 Tools
+🎹 Chord
+🎼 Scale
+🎸 Fretboard
+🎡 Circle
+👂 Ear Training
+💪 Practice
+📚 Curriculum
+🎼 Tab
+⚙️ Settings
+
+That's still in the current HTML.
+
+So Batch B should remain.
+
+However, add Guide to the icon list because Batch E adds it.
+
+I would use one consistent SVG style
+20 × 20
+stroke/currentColor
+same stroke width
+no gradients
+no multicolor
+
+And remove emoji from navigation only first.
+
+Don't spend time replacing every emoji inside practice descriptions yet. That's a separate visual cleanup.
+
+4. Batch C needs significant correction
+
+The proposed plan says:
+
+AudioPlayer.js → add setVolume()
+
+and:
+
+DrumSampler.js → add setVolume()
+
+Don't do that.
+
+The current AudioSessionManager already has:
+
+setInstrumentVolume("guitar", value)
+setInstrumentVolume("drums", value)
+
+and dedicated gain nodes.
+
+So the proper implementation is:
+
+Jam Guitar Volume
+        ↓
+sessionManager.setInstrumentVolume("guitar", value)
+
+Jam Drums Volume
+        ↓
+sessionManager.setInstrumentVolume("drums", value)
+
+No duplicate gain node is necessary.
+
+5. Current Jam Station is functional but minimal
+
+The current UI contains:
+
+progression
+key
+dynamic soloing guide
+Play
+Stop
+live chord indicator
+
+but doesn't have:
+
+BPM slider
+guitar volume
+drum volume
+
+and it's embedded at the bottom of the Fretboard page.
+
+So the UI expansion is justified.
+
+Add
+JAM STATION — Virtual Band
+
+Progression       Key        Style
+
+Tempo
+40 ───────●──────── 250
+120 BPM
+
+Guitar
+───────●──────
+
+Drums
+─────●────────
+
+Solo Guide
+Pentatonic
+
+Current Chord
+     C
+
+[ PLAY ] [ STOP ]
+6. BPM backend already exists
+
+BackingTrackEngine already has:
+
+setBpm(bpm)
+
+and its scheduler calculates timing from the current BPM.
+
+So the plan doesn't need to invent a BPM engine.
+
+Just add:
+
+jam-bpm
+jam-bpm-label
+
+and:
+
+input → backingEngine.setBpm(...)
+But test real-time changes carefully.
+
+The current scheduler is using a 25ms lookahead and 100ms scheduling horizon, which is appropriate.
+
+Don't restart Jam every time the slider moves.
+
+7. The drum system is already implemented
+
+The current architecture is:
+
+BackingTrackEngine
+       ↓
+RhythmEngine
+       ↓
+DrumSampler
+       ↓
+AudioSessionManager
+       ↓
+Drums Gain
+
+The scheduler calls:
+
+rhythmEngine.playTick(...)
+
+and the rhythm engine generates kick/snare/hihat events.
+
+So again:
+
+Don't create another drum engine.
+
+Just expose its volume through the existing AudioSessionManager.
+
+8. Acoustic guitar architecture is also already implemented
+
+The current AudioPlayer now constructs:
+
+GuitarSampler
+
+and the sampler has:
+
+E2
+A2
+D3
+G3
+B3
+E4
+
+with nearest-sample pitch shifting and a GuitarSynthFallback.
+
+That's good.
+
+The flow is:
+
+AudioPlayer
+    ↓
+GuitarSampler
+    ↓
+Real sample
+    ↓
+or nearest sample + pitch shift
+    ↓
+or GuitarSynthFallback
+
+So do not redesign this.
+
+9. But the sample assets remain a real blocker
+
+The sampler references:
+
+/audio/guitar/acoustic/E2.mp3
+/audio/guitar/acoustic/A2.mp3
+...
+
+and the drum sampler references the acoustic drum WAVs.
+
+The repository currently doesn't expose an app/static/audio directory in the current branch tree, so this needs to be resolved before "real acoustic sound" can be considered complete.
+
+Decision should be:
+
+Use properly licensed real samples.
+
+Do not use base64 8-bit samples.
+
+Do not claim the feature is complete with Karplus-Strong as primary.
+
+Keep the synth only as the documented fallback.
+
+Also add:
+
+app/static/audio/LICENSES.md
+10. Batch D is already partially implemented — and this is important
+
+Your plan says:
+
+Add detectionHistory = []
+
+But current App.js already uses:
+
+this.detectionHistory.push(noteData.name)
+
+and limits it to 64.
+
+It also already has:
+
+async replayDetection()
+
+and it:
+
+navigates to Fretboard
+loops through history
+plays notes
+highlights fretboard
+clears after replay
+
+So do not implement Batch D from scratch.
+
+11. But Batch D is currently broken
+
+This is one of the strongest findings from the current branch.
+
+The constructor initializes:
+
+lastDetectedNote
+sequenceAbortFlag
+
+but I don't see initialization of:
+
+detectionHistory
+
+in the current constructor.
+
+Yet detection later does:
+
+this.detectionHistory.push(noteData.name);
+
+That can fail because detectionHistory hasn't been initialized.
+
+Fix:
+this.detectionHistory = [];
+
+in the constructor.
+
+12. Replay button wiring is also incomplete
+
+replayDetection() expects:
+
+this.elements.replayHistoryBtn
+
+but the current elements collection doesn't define it.
+
+And current detector HTML doesn't have the requested Replay button.
+
+So Batch D should be:
+
+Batch D — Finish Detection Replay
+Initialize detectionHistory.
+Add replayHistoryBtn to elements.
+Add button to HTML.
+Wire click.
+Enable after first detected note.
+Disable while replaying.
+Add Stop Replay.
+Clear history appropriately.
+Ensure navigation cancels replay.
+13. I would improve the replay data structure
+
+Current history is just:
+
+["C4", "E4", "G4", "A4"]
+
+That is enough for V1.
+
+But the original request specifically mentions replaying the detected sequence, so timing matters.
+
+Eventually use:
+
+{
+    note: "C4",
+    timestamp: performance.now()
+}
+
+Then normalize:
+
+10.00 → 0.00
+10.43 → 0.43
+10.91 → 0.91
+11.37 → 1.37
+
+The replay then preserves the user's rhythm rather than playing every note at a fixed 500ms.
+
+I would make this part of Batch D.
+14. Current replay also has a navigation problem
+
+replayDetection() navigates to the Fretboard:
+
+Replay
+ ↓
+Fretboard
+
+which is reasonable.
+
+But the current navigation handler stops the known engines and calls sessionManager.stopAll(), while playSequence() is controlled by its own async loop and sequenceAbortFlag.
+
+Therefore you should explicitly cancel replay when navigating.
+
+Otherwise:
+
+Replay
+ ↓
+User clicks another menu
+ ↓
+UI changes
+ ↓
+Replay loop can continue
+
+That's exactly the kind of lifecycle bug your global audio architecture is supposed to eliminate.
+
+15. Batch E is genuinely missing
+
+I don't see a Guide screen in the current navigation.
+
+The current navigation ends with Settings.
+
+So add:
+
+Guide
+
+and:
+
+guide-screen
+
+I agree with your content list.
+
+I'd organize it:
+
+AHORDIAN GUIDE
+
+Getting Started
+├── Dashboard
+├── Tuner & Detector
+└── Fretboard
+
+Theory
+├── Chord Explorer
+├── Scale Explorer
+├── Circle of Fifths
+├── Sargam
+└── CAGED / TNPS
+
+Practice
+├── Ear Training
+├── Practice Generator
+├── Jam Station
+└── Detection Replay
+
+Audio
+├── Metronome
+├── Guitar sounds
+├── Drum sounds
+├── Master volume
+└── Mute
+
+Content
+├── Guitar Curriculum
+└── Tab Player
+
+This can be a single in-app page; no need for a separate documentation system yet.
+
+16. One existing incorrect label should be fixed
+
+Current HTML says:
+
+"Drag & Drop Audio File to Analyze Server-Side"
+
+But App.js uses:
+
+FileReader
+decodeAudioData
+PitchDetector.autoCorrelate
+
+locally in the browser.
+
+So change it to:
+
+Drag & Drop Audio File to Analyze Locally
+
+That's not just wording — it's technically more accurate.
+
+17. Another thing I would NOT do in this implementation
+
+Don't refactor App.js now.
+
+It is already around 990 lines of actual source code according to GitHub.
+
+Yes, it is too large.
+
+But this implementation batch isn't the time to split it into 10 new managers.
+
+The current architecture already has:
+
+App
+UIManager
+MusicEngine
+FretboardManager
+CircleManager
+EarTrainingManager
+LessonManager
+TabPlayer
+AudioSessionManager
+SampleManager
+GuitarSampler
+DrumSampler
+RhythmEngine
+BackingTrackEngine
+
+Adding more abstractions while implementing these features is more likely to create integration problems.
+
+Finish the existing architecture first.
+
+Revised plan — this is what I recommend actually implementing
+Phase 0 — Fix existing incomplete integrations
+
+Before A–E:
+
+1. Initialize detectionHistory = [].
+2. Register replayHistoryBtn in App.elements.
+3. Verify all audio session types.
+4. Ensure exclusive session actually stops previous audio.
+5. Ensure navigation cancels:
+   - Jam
+   - Metronome
+   - Tab Player
+   - playSequence()
+   - replayDetection()
+6. Verify sample paths and assets.
+
+This should be mandatory.
+
+Phase A — Global Audio UI
+Add to topbar
+[ 🔊 ] [ Master ───────── ] [ ▶ Jam Station ]
+
+IDs:
+
+global-mute-btn
+master-volume
+now-playing-pill
+now-playing-label
+now-playing-goto
+Use existing APIs
+toggleMute()
+setMasterVolume()
+onStateChangeCallback
+getActiveState()
+
+Do not create another PlaybackManager.
+
+Phase B — SVG navigation
+
+Replace navigation emojis with consistent:
+
+Home
+Tuner
+Tools
+Chord
+Scale
+Fretboard
+Circle
+Ear
+Practice
+Lessons
+Tab
+Guide
+Settings
+
+Use:
+
+currentColor
+single color
+consistent size
+consistent stroke
+Phase C — Jam Station
+
+Add:
+
+jam-bpm
+jam-bpm-label
+
+jam-guitar-vol
+jam-guitar-vol-label
+
+jam-drums-vol
+jam-drums-vol-label
+
+Use existing:
+
+backingEngine.setBpm(value)
+
+sessionManager.setInstrumentVolume("guitar", value)
+
+sessionManager.setInstrumentVolume("drums", value)
+
+Do not modify AudioPlayer.js or DrumSampler.js just for volume.
+
+Phase D — Detection Replay
+
+Finish existing implementation:
+
+detectionHistory = []
+       ↓
+record note + timestamp
+       ↓
+maximum 64
+       ↓
+Replay button
+       ↓
+normalize timing
+       ↓
+schedule playback
+       ↓
+highlight fretboard
+       ↓
+Stop Replay
+
+Preserve actual detected rhythm rather than forcing every note to 500ms.
+
+Phase E — Guide
+
+Add:
+
+Guide
+
+with structured collapsible sections.
+
+Phase F — Real acoustic assets
+
+This should be an explicit implementation phase, not an "open question."
+
+Real licensed acoustic guitar samples
+Real licensed drum samples
+        ↓
+SampleManager
+        ↓
+GuitarSampler / DrumSampler
+        ↓
+Fallback synth only if unavailable
+
+Add licensing documentation.
+
+Phase G — Verification
+Global audio
+□ Jam starts
+□ Now Playing appears
+□ Mute silences all output
+□ Unmute restores output
+□ Master volume works
+□ Jam → Metronome override works
+□ Metronome → Jam override works
+□ Navigation stops actual audio
+□ Now Playing disappears
+□ Now Playing Go button navigates correctly
+Jam
+□ BPM 40–250
+□ BPM changes during playback
+□ Guitar volume
+□ Drum volume
+□ Master volume
+□ Current chord
+□ Progression changes
+□ Key changes
+□ Style changes
+□ Drums synchronized
+Detection
+□ detectionHistory initialized
+□ 64-note cap
+□ Replay button disabled initially
+□ Replay enabled after detection
+□ Timing preserved
+□ Fretboard highlights
+□ Stop Replay works
+□ Navigation cancels replay
+□ Replay doesn't overlap previous replay
+Samples
+□ Guitar samples load
+□ Drum samples load
+□ Partial-load state
+□ Failed-load state
+□ Synth fallback works
+□ No 404 sample requests
+Final assessment of the proposed plan
+
+The plan you provided is about 70–80% correct conceptually, but it is not yet safe as a coding-agent prompt.
+
+The main corrections are:
+
+Remove from the plan
+❌ Create PlaybackManager
+❌ Add AudioPlayer.setVolume()
+❌ Add DrumSampler.setVolume()
+❌ Rebuild detectionHistory/replay from scratch
+❌ Refactor whole App.js
+Keep
+✅ Global mute
+✅ Master volume
+✅ Now Playing
+✅ SVG navigation
+✅ Jam Station UI
+✅ Jam BPM
+✅ Guitar/drum mixer
+✅ Detection Replay
+✅ Guide
+✅ Acoustic samples
+Add
+🔴 Fix exclusive session stopping
+🔴 Initialize detectionHistory
+🔴 Wire replayHistoryBtn
+🔴 Cancel replay on navigation
+🔴 Preserve detection timing
+🔴 Verify actual acoustic assets
+🔴 Add sample licensing
+🔴 Full regression testing
+
+The most important architectural fact from this latest review is that the current branch already has a good audio routing foundation. AudioSessionManager already provides master, instrument-level gains, mute, volume, state callbacks, compressor routing, and session state.
+
+So the next implementation should be finishing and correcting that architecture, not adding another layer on top of it
