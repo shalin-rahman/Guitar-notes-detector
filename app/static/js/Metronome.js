@@ -1,3 +1,5 @@
+import { AudioSessionType } from './audio/AudioSessionManager.js';
+
 export default class Metronome {
     constructor() {
         this.audioContext = null;
@@ -14,9 +16,10 @@ export default class Metronome {
         this.beatsPerMeasure = 4;
     }
 
-    initAudio() {
-        if (!this.audioContext) {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    initAudio(sessionManager) {
+        if (!this.sessionManager) {
+            this.sessionManager = sessionManager;
+            this.audioContext = sessionManager.ctx;
         }
     }
 
@@ -54,7 +57,7 @@ export default class Metronome {
         }
 
         osc.connect(envelope);
-        envelope.connect(this.audioContext.destination);
+        envelope.connect(this.sessionManager.getDestination());
 
         osc.start(time);
         osc.stop(time + 0.1);
@@ -69,8 +72,12 @@ export default class Metronome {
 
     start() {
         if (this.isPlaying) return;
-        this.initAudio();
         this.isPlaying = true;
+        
+        if (this.sessionManager) {
+            this.sessionManager.startSession(AudioSessionType.METRONOME);
+        }
+        
         this.currentTick = 0;
         this.nextTickTime = this.audioContext.currentTime;
         this.timerID = setInterval(() => this.scheduler(), this.lookahead);
@@ -79,6 +86,9 @@ export default class Metronome {
     stop() {
         this.isPlaying = false;
         clearInterval(this.timerID);
+        if (this.sessionManager) {
+            this.sessionManager.stopSession(AudioSessionType.METRONOME);
+        }
     }
 
     setBpm(newBpm) {

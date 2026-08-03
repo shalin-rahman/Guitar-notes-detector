@@ -1,9 +1,11 @@
 import AppConfig from './AppConfig.js';
 import MusicEngine from './MusicEngine.js';
+import { AudioSessionType } from './audio/AudioSessionManager.js';
 
 export default class BackingTrackEngine {
-    constructor(audioPlayer, fretboardManager, onChordChange) {
+    constructor(audioPlayer, rhythmEngine, fretboardManager, onChordChange) {
         this.player = audioPlayer;
+        this.rhythmEngine = rhythmEngine;
         this.fretboard = fretboardManager;
         this.onChordChange = onChordChange;
         
@@ -87,6 +89,10 @@ export default class BackingTrackEngine {
             this.player.ctx.resume();
         }
 
+        if (this.player.sessionManager) {
+            this.player.sessionManager.startSession(AudioSessionType.JAM_TRACK, { exclusive: true });
+        }
+
         this.isPlaying = true;
         this.currentTick = 0;
         this.currentMeasure = 0;
@@ -101,6 +107,9 @@ export default class BackingTrackEngine {
     stop() {
         this.isPlaying = false;
         clearInterval(this.timerID);
+        if (this.player && this.player.sessionManager) {
+            this.player.sessionManager.stopSession(AudioSessionType.JAM_TRACK);
+        }
     }
 
     scheduler() {
@@ -111,22 +120,24 @@ export default class BackingTrackEngine {
     }
 
     advanceTick() {
-        let secondsPerBeat = 60.0 / this.bpm;
+        let secondsPer16thNote = (60.0 / this.bpm) / 4.0;
         
         // Handle swing/shuffle timing dynamically
         if (this.activeProgression.style === "shuffle" || this.activeProgression.style === "swing") {
-            // Very simple swing simulation: make the downbeat longer and upbeat shorter
+            // Very simple swing simulation on 16ths:
+            // 1 e & a -> 1 longer, e shorter, & longer, a shorter
             if (this.currentTick % 2 === 0) {
-                secondsPerBeat *= 1.33; // 2/3 of a triplet
+                secondsPer16thNote *= 1.33; 
             } else {
-                secondsPerBeat *= 0.67; // 1/3 of a triplet
+                secondsPer16thNote *= 0.67; 
             }
         }
         
-        this.nextTickTime += secondsPerBeat;
+        this.nextTickTime += secondsPer16thNote;
         this.currentTick++;
         
-        if (this.currentTick >= this.activeProgression.beatsPerMeasure) {
+        // 16 ticks = 4 beats = 1 measure
+        if (this.currentTick >= this.activeProgression.beatsPerMeasure * 4) {
             this.currentTick = 0;
             this.currentMeasure++;
             
@@ -148,31 +159,59 @@ export default class BackingTrackEngine {
         }
     }
 
-    scheduleTick(beatNumber, measureNumber, time) {
+    scheduleTick(tickIndex, measureNumber, time) {
+        // Trigger drums on every 16th note tick
+        if (this.rhythmEngine && this.player.sessionManager) {
+            this.rhythmEngine.playTick(this.activeProgression.style, tickIndex, time, this.player.sessionManager.getDestination());
+        }
+
+        // Chords usually play on quarter notes (tickIndex % 4 === 0)
+        // or eighth notes (tickIndex % 2 === 0), depending on style.
+        const beatNumber = Math.floor(tickIndex / 4);
+        const isQuarterNote = tickIndex % 4 === 0;
+
         const chordDef = this.activeProgression.chords.find(c => c.measure === measureNumber);
         if (!chordDef) return;
 
         const actualChord = this.resolveNumeralToChord(chordDef.numeral, this.keyRoot);
         
-        // Rhythm Pattern based on style
         let shouldStrum = false;
         let strumVelocity = 0.5;
         
-        if (this.activeProgression.style === "straight") {
+        if (this.activeProgression.style === "straight" && isQuarterNote) {
             // Play on 1 and 3
             if (beatNumber === 0 || beatNumber === 2) {
                 shouldStrum = true;
                 strumVelocity = beatNumber === 0 ? 0.8 : 0.6;
             }
-        } else if (this.activeProgression.style === "shuffle") {
+        } else if (this.activeProgression.style === "shuffle" && isQuarterNote) {
             // Play on 1, 2, 3, 4 with varying accents
             shouldStrum = true;
             strumVelocity = beatNumber === 0 ? 0.9 : 0.5;
-        } else if (this.activeProgression.style === "swing") {
+        } else if (this.activeProgression.style === "swing" && isQuarterNote) {
             // Play on 2 and 4 (comping)
             if (beatNumber === 1 || beatNumber === 3) {
                 shouldStrum = true;
                 strumVelocity = 0.7;
+            }
+        } else if (this.activeProgression.style === "pop") {
+            // Typical pop strumming pattern: 1, 2&, 4
+            // 1 (tick 0), 2 (tick 4, no strum), & (tick 6), 4 (tick 12)
+            if (tickIndex === 0) {
+                shouldStrum = true;
+                strumVelocity = 0.85;
+            } else if (tickIndex === 6) { // "and" of beat 2
+                shouldStrum = true;
+                strumVelocity = 0.6;
+            } else if (tickIndex === 12) { // beat 4
+                shouldStrum = true;
+                strumVelocity = 0.75;
+            }
+        } else if (this.activeProgression.style === "rock") {
+            // Steady 8th notes
+            if (tickIndex % 2 === 0) {
+                shouldStrum = true;
+                strumVelocity = (tickIndex % 4 === 0) ? 0.8 : 0.5;
             }
         }
         
@@ -195,17 +234,9 @@ export default class BackingTrackEngine {
             let octave = baseOctave;
             if (index > 2) octave++;
             
-            // Re-use AudioPlayer's Karplus-Strong but we need to bypass the playNote internal timing
-            // Since we can't easily modify playNote to take an exact schedule time without a rewrite,
-            // we will simulate the delay using setTimeout for now, which is "good enough" for a simple jam.
-            const delayMs = (time - this.player.ctx.currentTime) * 1000;
-            if (delayMs > 0) {
-                setTimeout(() => {
-                    this.player.playNote(`${noteClass}${octave}`, duration);
-                }, delayMs);
-            } else {
-                 this.player.playNote(`${noteClass}${octave}`, duration);
-            }
+            // Exact Web Audio clock scheduling
+            const velocity = baseVelocity * (0.8 + Math.random() * 0.4);
+            this.player.scheduleNote(`${noteClass}${octave}`, time, velocity, duration);
         });
     }
 

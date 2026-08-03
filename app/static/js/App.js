@@ -14,6 +14,11 @@ import VoicingGenerator from './VoicingGenerator.js';
 import EarTrainingManager from './EarTrainingManager.js';
 import LessonManager from './LessonManager.js';
 import TabPlayer from './TabPlayer.js';
+import AudioSessionManager, { AudioSessionType } from './audio/AudioSessionManager.js';
+
+import SampleManager from './audio/SampleManager.js';
+import DrumSampler from './audio/DrumSampler.js';
+import RhythmEngine from './audio/RhythmEngine.js';
 
 class App {
     constructor() {
@@ -174,6 +179,12 @@ class App {
                 this.elements.navBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 
+                // Stop active audio on navigation
+                if (this.backingEngine) this.backingEngine.stop();
+                if (this.metronome) this.metronome.stop();
+                if (this.tabPlayer && typeof this.tabPlayer.stop === 'function') this.tabPlayer.stop();
+                if (this.sessionManager) this.sessionManager.stopAll();
+                
                 if (target === 'home-screen') this.updateDashboard();
                 
                 // Lazy-init Ear Training on first visit
@@ -273,7 +284,7 @@ class App {
             this.elements.jamPlayBtn.addEventListener('click', () => {
                 this.initAudioContext();
                 if (!this.backingEngine) {
-                    this.backingEngine = new BackingTrackEngine(this.player, this.fretboard, this.onJamChordChange.bind(this));
+                    this.backingEngine = new BackingTrackEngine(this.player, this.rhythmEngine, this.fretboard, this.onJamChordChange.bind(this));
                 }
                 // Ensure player is linked if created late
                 this.backingEngine.player = this.player;
@@ -774,10 +785,28 @@ class App {
     initAudioContext() {
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            this.player = new AudioPlayer(this.audioContext);
+            this.sessionManager = new AudioSessionManager(this.audioContext);
+            this.sampleManager = new SampleManager(this.audioContext);
+            
+            this.player = new AudioPlayer(this.sessionManager, this.sampleManager);
             this.player.onStateChange = (isPlaying) => {
                 this.elements.soundToggle.classList.toggle('playing', isPlaying);
             };
+            
+            this.drumSampler = new DrumSampler(this.audioContext, this.sampleManager);
+            this.rhythmEngine = new RhythmEngine(this.drumSampler);
+            
+            // If BackingTrackEngine was already created before audioContext, update it
+            if (this.backingEngine) {
+                this.backingEngine.rhythmEngine = this.rhythmEngine;
+            }
+            
+            // Kick off sample loading
+            this.player.loadSamples();
+            this.rhythmEngine.loadSamples();
+            
+            // Initialize metronome audio here since we now have the session manager
+            this.metronome.initAudio(this.sessionManager);
         }
         if (this.audioContext.state === 'suspended') {
             this.audioContext.resume();
