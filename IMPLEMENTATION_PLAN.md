@@ -190,6 +190,33 @@ All three suites re-run after both fixes — no regression.
 
 ---
 
+## Microphone session semantics — decided and closed
+
+`AudioSessionType.TRANSCRIPTION` was declared and referenced nowhere, so the detector's
+`start()` never opened a session. The decision: **a session type means "the user is
+listening to this"**, and the microphone is input — there is nothing to hear and nothing
+for exclusivity to silence. So the type is **removed rather than wired up**, and Now
+Playing never represents the mic.
+
+This is already the right split in the UI: the mic has its own topbar indicator
+(`#mic-status`, "Live Detection Active" / "Microphone Off"), independent of the Now
+Playing pill. It also explains a behaviour that is deliberate, not a leak — `enterScreen()`
+calls `stopAll()`, which fans out only to *registered* handlers, so navigating away leaves
+detection running and the fretboard mirrors it. `stop()` still ends the mic tracks.
+
+`ANALYSIS` was dead for the identical reason (the drop path decodes and autocorrelates
+without ever playing back) and is removed with it. The enum now carries only the six
+genuinely audible types. A comment at the declaration records the reasoning, including the
+condition for reversing it: if either ever gains real playback, add the type back *with* a
+stop handler, because an unregistered type is silently unstoppable by navigation.
+
+*Verified:* `qa_mic_session.py` 18/18 against Chrome's fake capture device — detection
+raises no session and no pill; starting the metronome shows `Metronome` in the pill and
+does **not** stop the mic; navigation clears playback sessions while detection survives;
+Stop Detection ends the mic tracks and the badge returns to "Microphone Off".
+
+---
+
 ## Cosmetic pass — done
 
 Four things the screenshot review surfaced as taste rather than defect, now closed:

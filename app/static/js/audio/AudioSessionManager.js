@@ -1,10 +1,25 @@
+/**
+ * A session type means "the user is listening to this". That is the whole contract:
+ * it drives the Now Playing pill, and exclusivity means one audible source at a time.
+ *
+ * Input and offline work are therefore NOT session types:
+ *   - Microphone detection is input, not output — there is nothing to hear and nothing
+ *     for exclusivity to silence. It has its own topbar indicator (`#mic-status`), and
+ *     it intentionally survives navigation so the fretboard can mirror it, which a
+ *     session would have torn down via stopAll(). A `TRANSCRIPTION` type was declared
+ *     here and never used; representing the mic as "Now Playing" would have been wrong,
+ *     so it is deleted rather than wired up.
+ *   - Dropped-file analysis decodes and autocorrelates without ever playing back, so
+ *     the likewise-unused `ANALYSIS` type is gone for the same reason.
+ *
+ * If either ever gains real playback, add the type back *with* a stop handler — an
+ * unregistered type is silently unstoppable by navigation.
+ */
 export const AudioSessionType = {
     METRONOME: { id: "metronome", label: "Metronome", screen: "home-screen" },
     JAM_TRACK: { id: "jam-track", label: "Jam Station", screen: "fretboard-screen" },
     EAR_TRAINING: { id: "ear-training", label: "Ear Training", screen: "ear-training-screen" },
     NOTE_PREVIEW: { id: "note-preview", label: "Note Preview", screen: "tools-screen" },
-    TRANSCRIPTION: { id: "transcription", label: "Transcription", screen: "detector-screen" },
-    ANALYSIS: { id: "analysis", label: "Audio Analysis", screen: "tools-screen" },
     TAB_PLAYER: { id: "tab-player", label: "Tab Player", screen: "tab-player-screen" },
     REPLAY: { id: "replay", label: "Detection Replay", screen: "fretboard-screen" }
 };
