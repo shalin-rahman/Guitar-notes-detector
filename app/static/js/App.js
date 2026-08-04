@@ -717,7 +717,7 @@ class App {
             routine = [
                 { title: 'Open Chord Review', desc: `Drill G → C → D → Em transitions. Clean fret contact. ${bpm} BPM`, duration: perSegment, icon: 'piano' },
                 { title: 'Barre Chord Focus', desc: `Practice F Major, Bm. Slow strumming, focus on full ring.`, duration: perSegment, icon: 'dumbbell' },
-                { title: 'Diatonic Triads in ${key}', desc: `Play all 7 diatonic chords in key of ${key}. Use 3-note voicings.`, duration: perSegment, icon: 'sheet' },
+                { title: `Diatonic Triads in ${key}`, desc: `Play all 7 diatonic chords in key of ${key}. Use 3-note voicings.`, duration: perSegment, icon: 'sheet' },
                 { title: 'Rhythm Variation', desc: `Apply chord changes to a simple I → IV → V → I progression in ${key}.`, duration: duration - perSegment * 3, icon: 'drum' }
             ];
         } else if (resolvedFocus === 'rhythm') {

@@ -14,13 +14,17 @@ python -X utf8 qa_phase2.py     # visual pass: 13 screens, no functional emoji
 python -X utf8 qa_tasks.py      # aggregate sample status, all 5 drum voices audible
 python -X utf8 qa_verify.py     # synth fallback direct, panel/nav/guide geometry, highlight routing
 python -X utf8 qa_tone.py       # Settings -> Guitar Tone: both packs, lazy load, persistence
+python -X utf8 qa_practice.py   # practice routine cards, no uninterpolated ${...}, nav round-trip
 ```
 
 The `qa_*.py` scripts are **not tracked in this repo** — they live in the Claude Code
-session scratchpad. Copy them next to the repo root before running.
+session scratchpad. Copy them next to the repo root before running. Scratchpads purge after
+30 days, and every token estimate below assumes this harness exists; committing the six
+suites under `tests/` is the cheapest way to stop the numbers going stale.
 
 Current results: **qa_phase1 44/44**, **qa_phase2 30/30**, **qa_tasks 15/15**,
-**qa_verify 30/30**, **qa_tone 25/25** — 144 checks, no known failures.
+**qa_verify 30/30**, **qa_tone 25/25**, **qa_practice 20/20** — 164 checks across six
+suites, no known failures.
 
 Two harness bugs were fixed to get there, both stale assertions rather than product
 defects: qa_phase1 hardcoded a 6-sample guitar pack (now 19), and qa_tasks measured the
@@ -391,9 +395,103 @@ regression.
 
 ---
 
+## Open — Group P: Guided Practice (suggest *how*, then verify)
+
+**The gap.** `App.generatePracticeRoutine()` (App.js:677) emits four prose cards and stops.
+It tells the user *what* — "Drill G → C → D → Em transitions. Clean fret contact. 40 BPM",
+"focus on full ring" — but never *how*, never times it, and never checks whether it happened.
+There is no Start button, no timer, no record of having done it. The routine is a suggestion
+printed to a div.
+
+**The honest constraint on "verify".** "Clean fret contact" and "full ring" mean *all six
+strings sounding, none muted or buzzing* — that is polyphonic note detection, and the current
+detector is monophonic pitch tracking. So verification splits in two: the structural half
+(timer, sequencing, self-report, history) ships now against no ML at all; the listening half
+is **downstream of tasks.txt P1–P2** (Basic Pitch + chord inference) and must not be started
+before them or it will be rebuilt. P-1…P-5 and P-9 are independent. P-6…P-8 are not.
+
+Token figures are the Claude budget to implement *and* browser-verify each item, including
+iteration — not a single-pass generation cost. Treat ±40% as normal.
+
+**Revised 2026-08-04, down ~25–30% across the board.** The originals were budgeted before
+`.claude/skills/` existed. Two costs they included are now largely gone:
+
+- **Symbol discovery.** `references/codebase-map.md` lists the public surface of all 24
+  modules for ~1.8K tokens, replacing the grep-then-read-then-grep-again loop that used to
+  precede every change. Regenerate with `scripts/generate_codebase_map.py` (`--check` exits 1
+  when stale) rather than trusting a stale map.
+- **Domain re-derivation.** `guitar-audio-intelligence` carries tuning/MIDI, the frequency
+  bounds, the latency arithmetic and the chord-scoring rules in ~1.1K always-loaded tokens,
+  so the mic items no longer spend budget re-establishing them or exploring dead ends the
+  skill already rules out.
+
+What did **not** get cheaper is browser verification — Playwright iteration, audio proof via
+`AnalyserNode`, and re-running the suites still dominate every item, which is why P-6/P-7 fall
+proportionally less than the structural work.
+
+| # | Task | Effort | Tokens | Depends on |
+|---|---|---|---|---|
+| P-1 | **Fix `${key}` rendering literally** in the Diatonic Triads title — App.js:720 used `'…'` where it needed a backtick, so the card read `Diatonic Triads in ${key}`. | done | ~2k | — |
+| P-2 | **Structured routine model.** Replace `{title, desc, duration, icon}` with machine-readable targets: `{id, title, howTo[], duration, icon, verify: {type:'chord-sequence', targets:['G','C','D','Em'], bpm}}`. Nothing downstream can verify a prose string, so this is the enabling change — do it first even though it ships no visible feature. | 2–3 h | 45–65k | — |
+| P-3 | **"How do I do this?" content.** Each step expands to concrete instruction: finger placement, what *clean contact* means, the common failure mode, what success sounds like. Plus deep links — Barre Chord Focus jumps to F Major in the Chord Explorer, Diatonic Triads to that key in the Circle of Fifths. Content-heavy, low risk; the deep-link targets are in `codebase-map.md` so the wiring no longer needs discovery. | 3–4 h | 60–90k | P-2 |
+| P-4 | **Session runner.** Start / pause / skip / next, per-step countdown, auto-advance, progress bar, and the metronome auto-started at the routine BPM. Must register a stop handler with `AudioSessionManager` — a practice session is a sound source and the exclusivity rule applies to it like any other. | 4–5 h | 70–100k | P-2 |
+| P-5 | **Self-report verification.** After each step: *Got it / Shaky / Skipped*, persisted per step id. This is the whole verify loop minus the microphone, and it is what makes P-8 possible. Ships real value with zero ML. | 2 h | 35–50k | P-4 |
+| P-6 | **Mic verification v1 — chord hold.** User holds F Major; the app confirms all six strings ring and names the ones muted or buzzing. This is the first genuine answer to "focus on full ring". | 1–2 d | 150–220k | tasks.txt P1+P2 |
+| P-7 | **Mic verification v2 — timed change drill.** G → C → D → Em against the click: did the change land on the beat, and was it clean on arrival. The real payoff for routine step 1, and the hardest item here — onset timing plus polyphonic identification under a metronome. | 2–3 d | 190–300k | P-6 |
+| P-8 | **History and weak-spot targeting.** Per-step pass/fail over time, surfaced on the Practice screen, and `generatePracticeRoutine()` weighted toward what keeps failing instead of `Math.random()`. This is what turns four cards into a practice *programme*. | 3–4 h | 55–75k | P-5 |
+| P-9 | **Extend `qa_practice.py`.** The suite already exists and passes 20/20 (card render, nav round-trip, and the uninterpolated-`${…}` assertion that pins the P-1 bug class). What it does not yet cover: timer advances and stops, the session registers *and releases* its audio session, and self-report persists across a reload. Extension of a working harness, not a new one. | 1–2 h | 40–55k | P-4 |
+
+**Structural half (P-2…P-5, P-9): ~12–14 h, ~250–360k tokens** (was 350–500k). Ships a
+practice session you can actually run and log.
+**Listening half (P-6…P-8): ~4–6 d, ~395–595k tokens** (was 530–800k), and only after the
+detection work.
+
+Suggested order: P-2 → P-4 → P-5 → P-3 → P-9, then reassess once tasks.txt P1–P2 exist.
+P-3 sits late deliberately — it is the easiest to write and the easiest to rewrite, so it
+should follow the model that constrains its shape rather than lead it.
+
+---
+
+## Open — Group Q: Reproducibility and setup honesty
+
+**The gap.** The 164 checks above are the only evidence that anything in "Done" is actually
+done, and they exist in exactly one place: a Claude Code session scratchpad that purges after
+30 days. Nobody else can reproduce them, and once they're gone every "verified in a browser"
+claim in this document becomes unfalsifiable. That is the single largest risk in the repo — it
+is not a feature gap, it is the plan losing its own foundation.
+
+A code review on 2026-08-04 also claimed the audio samples were not committed and that setup
+required `python app/download_samples.py`. **That claim was wrong** — all 44 files
+(38 guitar mp3 + 5 drum wav + LICENSES.md) are tracked, added in `a063715`, 1.5 MB total, and
+the downloader skips files that already exist, so it is a re-fetch tool and a no-op on a fresh
+checkout. But the review reached that conclusion honestly, by reading the default branch, and
+nothing in the repo says otherwise. Q-3 exists so the next reader does not repeat it.
+
+| # | Task | Effort | Tokens | Depends on |
+|---|---|---|---|---|
+| Q-1 | **Commit the six `qa_*.py` suites under `tests/`** with their existing names — `qa_phase1`, `qa_phase2`, `qa_tasks`, `qa_verify`, `qa_tone`, `qa_practice` — plus a short `tests/README.md` giving the server command and each suite's expected count. Keep the names: renaming breaks the mapping between a file and its documented pass count, and the natural-looking splits (`qa_audio`/`qa_ui`/…) do not match how the suites are actually organised — `qa_phase2` is 13 screens of visual assertions across every feature, `qa_verify` mixes synth fallback, panel geometry, nav and highlight routing. One confirming run after the move; no new assertions. | 1 h | 15–25k | — |
+| Q-2 | **Stop tracking bytecode.** Two `app/__pycache__/*.pyc` files are tracked; `.gitignore` covers `.venv/` but has no `__pycache__/` entry. Add it and `git rm --cached` the two files. | 10 min | 3–5k | — |
+| Q-3 | **Say what setup actually is.** README states that a fresh checkout already contains every sample and that `download_samples.py` is *re-fetch if assets are missing or corrupt*, explicitly not a required step. Then make the missing-asset path name its own remedy: `SampleStatus.PARTIAL` / `ERROR` already reach the UI through `onStatusChange` → `App.renderSampleStatus()`, so the fallback is not silent, but the text is generic where it could say *run `python app/download_samples.py`*. Browser-verify by removing one sample and reading the indicator. | 1 h | 20–30k | — |
+| Q-4 | **CI, if wanted.** Only after Q-1, and not free: the suites drive real Chrome via `channel="chrome"` and assert audio levels through an `AnalyserNode`, so a runner needs system Chrome *and* an audio device, and the timing-sensitive checks (the ~2.5 s settling gap) are the classic shared-runner flake. Expect to quarantine the audio-level assertions and run the geometry/nav ones green first. | 2–3 h | 40–60k | Q-1 |
+
+Q-1 → Q-2 → Q-3 are independent of each other and of Group P, and Q-1 should go first
+regardless of what else is queued — it is ~1 h against a 30-day expiry.
+
+---
+
 ## Blocked — needs your decision
 
-*(none — the drum-asset block below was resolved; see Group 3.3 in Done.)*
+- **`origin/main` is 22 commits behind `dev`** and is the GitHub default branch
+  (`origin/HEAD → origin/main`). It has **no `app/static/audio/` directory at all**, no
+  `download_samples.py`, no `SampleManager.js`, no `audio/` module dir and no
+  `AudioSessionManager` — 14 files under `app/static/js/` against the current 24. It predates
+  the entire audio-session architecture. So a `git clone` or a browse of this project shows a
+  months-old app, which is what caused the 2026-08-04 review to conclude the samples were
+  missing. Merging `dev` → `main` fixes that and nothing else on this list depends on it, but
+  it is a push to a shared default branch, so it needs your explicit go-ahead rather than
+  being inferred.
+
+*(The former drum-asset block here was resolved — see Group 3.3 in Done.)*
 
 ---
 
