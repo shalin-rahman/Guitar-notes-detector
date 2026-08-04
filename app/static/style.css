@@ -146,6 +146,14 @@ body {
     gap: 10px;
 }
 
+/* The nav SVGs carry a viewBox but no width/height (unlike icon(), which sets one),
+   so without this they fall back to the replaced-element default and render ~100px. */
+.nav-btn > svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
 .nav-btn.active {
     background: rgba(255, 215, 0, 0.1);
     border: 1px solid rgba(255, 215, 0, 0.3);
@@ -456,7 +464,9 @@ body {
 
 .settings-mini label { color: var(--accent); font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px; }
 .checkbox-label { display: flex !important; align-items: center; gap: 8px; cursor: pointer; }
-.checkbox-label input { width: 16px; height: 16px; cursor: pointer; }
+/* accent-color tints the native control, which keeps keyboard focus and the
+   indeterminate state working — a hand-built ::before box would lose both. */
+.checkbox-label input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
 
 input[type=range] { width: 100%; }
 
@@ -1125,12 +1135,71 @@ input[type=range] { width: 100%; }
     transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Metronome UI Polish */
-.metronome-control input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
+/* ============================
+   TOPBAR METRONOME CLUSTER
+   ============================
+   Grouped into one glass pill so it reads as a single control, matching
+   .master-vol-control on the other side of the topbar. The native number input
+   and selects are restyled here rather than given .styled-input, because that
+   class is width:100% and would blow the row apart. */
+.metronome-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    background: rgba(0,0,0,0.3);
+}
+
+/* Background/box-shadow are driven inline by Metronome.onTick, so only the
+   shape and the resting colour belong here. */
+#metronome-light {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #333;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+#metronome-bpm {
+    width: 46px;
+    padding: 3px 6px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    outline: none;
 }
 #metronome-bpm:focus {
     color: #fff !important;
+    border-color: var(--primary);
+}
+
+.metronome-control .bpm-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.metronome-control select {
+    padding: 3px 6px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    outline: none;
+}
+.metronome-control select:focus { border-color: var(--primary); }
+
+.metronome-control input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
 }
 
 /* Mobile Quick Fixes */
@@ -1357,6 +1426,15 @@ input[type=range] { width: 100%; }
 }
 
 /* MASTER VOLUME */
+/* Without this the flex .master-vol-control claims its own line and pushes the
+   mute button and mic badge onto rows below it. */
+.topbar-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 10px;
+}
+
 .master-vol-control {
     display: flex;
     align-items: center;
@@ -1573,15 +1651,30 @@ h2.page-title, .dash-card h3, .guide-header h3, .guide-intro h2 {
 
 /* --- Topbar ------------------------------------------------------------ */
 .sample-status {
-    /* revealed by App.js (display:flex) while samples decode */
-    display: none;
+    /* visible from first paint: loading starts immediately. App.js swaps the
+       glyph/colour per state and adds .is-hidden only when idle. */
+    display: flex;
     align-items: center;
     gap: 5px;
     margin-left: 10px;
     font-size: 0.8rem;
     color: var(--text-muted);
 }
-.sample-status-ico { animation: spin-anim 1s linear infinite; }
+/* .sample-status comes after the generic .is-hidden, so it needs the pair */
+.sample-status.is-hidden { display: none; }
+
+/* only the loading arc spins — the check / alert glyphs must sit still */
+.sample-status-ico.spinning { animation: spin-anim 1s linear infinite; }
+.sample-status.state-ok { color: #4ade80; }
+.sample-status.state-warn { color: #ffaa00; }
+.sample-status.state-error { color: #ff4444; }
+
+/* one aggregate line: "Audio  ✓ Guitar 6/6  ⚠ Drums 3/5" */
+.sample-status-label { text-transform: uppercase; letter-spacing: 1px; font-weight: 700; opacity: 0.75; }
+.sample-status-text { display: inline-flex; align-items: center; gap: 10px; }
+.sample-pack { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.sample-pack.incomplete { color: #ffaa00; font-weight: 700; }
+.sample-pack-ico { display: inline-flex; align-items: center; pointer-events: none; }
 
 .sidebar-feedback {
     margin-top: 20px;
@@ -1629,6 +1722,14 @@ h2.page-title, .dash-card h3, .guide-header h3, .guide-intro h2 {
     margin: 10px 0 5px 0 !important;
 }
 .cof-key-sig { margin-bottom: 12px; font-size: 0.85rem !important; }
+
+/* Empty state for the info panel, shown until CircleManager.selectKey() runs. */
+.cof-empty-hint {
+    font-size: 0.85rem !important;
+    line-height: 1.5;
+    opacity: 0.7;
+    margin: 10px 0 16px 0 !important;
+}
 
 /* --- Ear Training ------------------------------------------------------ */
 .quiz-card {
@@ -1786,7 +1887,9 @@ h2.page-title, .dash-card h3, .guide-header h3, .guide-intro h2 {
 }
 .jam-mixer .settings-mini { flex: 1; min-width: 150px; }
 .jam-mixer input[type=range] { accent-color: var(--primary); }
-.jam-slider-label { display: flex; justify-content: space-between; }
+/* .settings-mini label sets display:block and outranks a bare .jam-slider-label,
+   so match the wrapper too and win on specificity. */
+.settings-mini label.jam-slider-label { display: flex; justify-content: space-between; gap: 10px; }
 .jam-slider-value { color: var(--primary); font-weight: 700; }
 
 /* --- JS-rendered lists (practice routine, lesson list) -------------------

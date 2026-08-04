@@ -19,7 +19,7 @@ export default class GuitarSampler {
     }
 
     async loadSamples() {
-        await this.sampleManager.loadSamplePack(this.sampleMap);
+        await this.sampleManager.loadSamplePack(this.sampleMap, 'Guitar');
     }
 
     getBufferForNote(noteName, duration) {

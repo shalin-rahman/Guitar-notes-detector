@@ -4,7 +4,10 @@ export default class StorageManager {
 
     static DEFAULT_SETTINGS = {
         handedness: 'right',
-        defaultTuning: 'Standard (E2-A2-D3-G3-B3-E4)',
+        // Must match an AppConfig.ALTERNATE_TUNINGS name — the settings <option>
+        // values come from there, and a value matching none of them leaves the
+        // select rendering blank.
+        defaultTuning: 'Standard',
         metronome: {
             bpm: 120,
             sound: 'beep',

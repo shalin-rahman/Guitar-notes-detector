@@ -26,6 +26,8 @@ export default class CircleManager {
             sig: document.getElementById('cof-key-sig'),
             scaleNotes: document.getElementById('cof-scale-notes'),
             relMinor: document.getElementById('cof-relative-minor'),
+            keyMeta: document.getElementById('cof-key-meta'),
+            emptyHint: document.getElementById('cof-empty-hint'),
             diatonic: document.getElementById('cof-diatonic-chords'),
             playBtn: document.getElementById('cof-play-scale'),
             intervalsToggle: document.getElementById('cof-intervals-toggle'),
@@ -258,6 +260,10 @@ export default class CircleManager {
             el.style.transform = `rotate(${-rot}deg)`;
             el.style.transition = 'transform 0.6s cubic-bezier(0.5, 0, 0.5, 1)';
         });
+
+        // A key is now selected, so the placeholder rows carry real values.
+        this.elements.keyMeta?.classList.remove('is-hidden');
+        this.elements.emptyHint?.classList.add('is-hidden');
 
         this.elements.title.textContent = `${rootNote} ${this.activeMode === 'major' ? 'Major (Ionian)' : 'Minor (Aeolian)'}`;
         this.elements.relMinor.textContent = `Relative ${this.activeMode === 'major' ? 'Minor' : 'Major'}: ${this.activeMode === 'major' ? k.min : k.maj}`;

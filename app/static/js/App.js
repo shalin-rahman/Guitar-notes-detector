@@ -193,6 +193,55 @@ class App {
     }
 
     /**
+     * One aggregate audio-loading line, e.g. "AUDIO  ✓ Guitar 6/6  ⚠ Drums 3/5".
+     * Guitar and drums load independently against one SampleManager, so the
+     * breakdown is rendered from its per-pack progress instead of letting
+     * whichever loader finished last own the whole message.
+     * An incomplete pack stays on screen — the synth fallback must not hide
+     * missing production assets.
+     */
+    renderSampleStatus(status, packs = []) {
+        const indicator = document.getElementById('sample-status-indicator');
+        if (!indicator) return;
+
+        const label = indicator.querySelector('.sample-status-text');
+        const spinner = indicator.querySelector('.sample-status-ico');
+        if (!label || !spinner) return;
+
+        const breakdown = packs.map(p => {
+            const ok = p.loaded === p.total;
+            return `<span class="sample-pack${ok ? '' : ' incomplete'}" title="${p.label}: ${p.loaded} of ${p.total} samples loaded">`
+                + `<span class="sample-pack-ico">${icon(ok ? 'check' : 'alert', { size: 12 })}</span>`
+                + `${p.label} ${p.loaded}/${p.total}</span>`;
+        }).join('');
+
+        indicator.classList.remove('state-ok', 'state-warn', 'state-error');
+
+        if (status === 'idle') {
+            indicator.classList.add('is-hidden');
+            return;
+        }
+
+        indicator.classList.remove('is-hidden');
+        const loading = status === 'loading';
+        spinner.classList.toggle('spinning', loading);
+        spinner.innerHTML = icon(loading ? 'loading' : (status === 'ready' ? 'check' : 'alert'), { size: 14 });
+
+        if (loading) {
+            label.innerHTML = breakdown || 'Loading...';
+        } else if (status === 'ready') {
+            indicator.classList.add('state-ok');
+            label.innerHTML = breakdown || 'Ready';
+        } else if (status === 'partial') {
+            indicator.classList.add('state-warn');
+            label.innerHTML = breakdown || 'Partially loaded';
+        } else {
+            indicator.classList.add('state-error');
+            label.innerHTML = `${breakdown}<span class="sample-pack incomplete">Using synth fallback</span>`;
+        }
+    }
+
+    /**
      * Switches the visible screen and syncs nav highlighting.
      * Deliberately does NOT touch audio — callers that need audio torn down do it
      * themselves. This lets replay navigate to the fretboard without stopping
@@ -559,7 +608,14 @@ class App {
         
         // Sync Settings UI
         if (this.elements.settingHandedness) this.elements.settingHandedness.value = settings.handedness;
-        if (this.elements.settingTuning) this.elements.settingTuning.value = settings.defaultTuning;
+        // A stored value that matches no <option> leaves the select blank, so fall
+        // back to the first tuning. Guards settings saved before the default was
+        // aligned with AppConfig.ALTERNATE_TUNINGS names.
+        const tuningSel = this.elements.settingTuning;
+        if (tuningSel) {
+            tuningSel.value = settings.defaultTuning;
+            if (!tuningSel.value && tuningSel.options.length) tuningSel.selectedIndex = 0;
+        }
         
         // Pass handedness to fretboard if method exists
         if (this.fretboard && typeof this.fretboard.setHandedness === 'function') {
@@ -1089,35 +1145,7 @@ class App {
                 }
             };
             
-            this.sampleManager.onStatusChange = (status) => {
-                const indicator = document.getElementById('sample-status-indicator');
-                if (!indicator) return;
-                
-                // The icon and the label are separate spans, so target them by class.
-                const label = indicator.querySelector('.sample-status-text');
-                const spinner = indicator.querySelector('.sample-status-ico');
-
-                if (status === 'loading') {
-                    indicator.style.display = 'flex';
-                    if (label) label.textContent = 'Loading Audio...';
-                    if (spinner) spinner.style.display = 'inline-flex';
-                    indicator.style.color = 'var(--text-muted)';
-                } else if (status === 'partial') {
-                    indicator.style.display = 'flex';
-                    if (label) label.textContent = 'Audio Partially Loaded';
-                    if (spinner) spinner.style.display = 'none';
-                    indicator.style.color = '#ffaa00';
-                    setTimeout(() => indicator.style.display = 'none', 4000);
-                } else if (status === 'error') {
-                    indicator.style.display = 'flex';
-                    if (label) label.textContent = 'Audio Load Error (Using Synth)';
-                    if (spinner) spinner.style.display = 'none';
-                    indicator.style.color = '#ff4444';
-                    setTimeout(() => indicator.style.display = 'none', 4000);
-                } else {
-                    indicator.style.display = 'none';
-                }
-            };
+            this.sampleManager.onStatusChange = (status, packs = []) => this.renderSampleStatus(status, packs);
             
             // Kick off sample loading
             this.player.loadSamples();

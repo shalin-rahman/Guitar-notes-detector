@@ -16,8 +16,10 @@ export const Icons = {
     'detector-screen': `<svg viewBox="0 0 24 24" ${STROKE}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
     'tools-screen': `<svg viewBox="0 0 24 24" ${STROKE}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
     'chord-explorer-screen': `<svg viewBox="0 0 24 24" ${STROKE}><rect x="2" y="2" width="6" height="20" rx="1"/><rect x="9" y="6" width="6" height="16" rx="1"/><rect x="16" y="10" width="6" height="12" rx="1"/></svg>`,
-    'scale-explorer-screen': `<svg viewBox="0 0 24 24" ${STROKE}><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
-    'fretboard-screen': `<svg viewBox="0 0 24 24" ${STROKE}><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+    // Ascending steps — a scale. (Was a smiley face, which said nothing about scales.)
+    'scale-explorer-screen': `<svg viewBox="0 0 24 24" ${STROKE}><polyline points="3 20 8 20 8 14 13 14 13 8 18 8 18 3 21 3"/></svg>`,
+    // Strings crossing frets. Distinct from tab-player-screen, which keeps the music note.
+    'fretboard-screen': `<svg viewBox="0 0 24 24" ${STROKE}><rect x="3" y="2" width="18" height="20" rx="2"/><line x1="9" y1="2" x2="9" y2="22"/><line x1="15" y1="2" x2="15" y2="22"/><line x1="3" y1="8" x2="21" y2="8"/><line x1="3" y1="15" x2="21" y2="15"/></svg>`,
     'circle-screen': `<svg viewBox="0 0 24 24" ${STROKE}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>`,
     'ear-training-screen': `<svg viewBox="0 0 24 24" ${STROKE}><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>`,
     'practice-screen': `<svg viewBox="0 0 24 24" ${STROKE}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
@@ -50,6 +52,7 @@ export const UiIconPaths = {
     close: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
     check: '<polyline points="20 6 9 17 4 12"/>',
     cross: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>',
+    alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
     jump: '<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>',
     chevron: '<polyline points="6 9 12 15 18 9"/>',
     tap: '<path d="M9 11V5a2 2 0 0 1 4 0v6"/><path d="M13 8a2 2 0 0 1 4 0v3"/><path d="M17 10a2 2 0 0 1 4 0v4a7 7 0 0 1-7 7h-2a7 7 0 0 1-7-7v-2a2 2 0 0 1 4 0"/>',

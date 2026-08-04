@@ -12,12 +12,20 @@ export default class SampleManager {
         this.buffers = new Map();
         this.status = SampleStatus.IDLE;
         this.onStatusChange = null;
+        // label -> { label, loaded, total }, in the order the packs were requested,
+        // so the UI can show one aggregate line: "Guitar 6/6 · Drums 5/5".
+        this.packs = new Map();
     }
-    
+
+    /** Per-pack progress for the status UI. */
+    getPackProgress() {
+        return [...this.packs.values()];
+    }
+
     setStatus(newStatus) {
         this.status = newStatus;
         if (this.onStatusChange) {
-            this.onStatusChange(this.status);
+            this.onStatusChange(this.status, this.getPackProgress());
         }
     }
     
@@ -43,13 +51,16 @@ export default class SampleManager {
      * per call — otherwise whichever pack finished last would overwrite the verdict
      * and a fully-loaded guitar pack could report ERROR because drums 404'd.
      */
-    async loadSamplePack(packDefinition) {
+    async loadSamplePack(packDefinition, packLabel = 'Audio') {
         const total = Object.keys(packDefinition).length;
         if (total === 0) return;
 
         this._expected = (this._expected || 0) + total;
         this._loaded = this._loaded || 0;
         this._pending = (this._pending || 0) + 1;
+
+        const pack = { label: packLabel, loaded: 0, total };
+        this.packs.set(packLabel, pack);
 
         this.setStatus(SampleStatus.LOADING);
 
@@ -58,6 +69,7 @@ export default class SampleManager {
             if (success) {
                 // Safe without a lock: increments happen on the single JS thread.
                 this._loaded++;
+                pack.loaded++;
             }
         });
 

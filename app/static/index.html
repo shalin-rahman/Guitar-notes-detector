@@ -79,8 +79,9 @@
 
                 <!-- Sample Loading Indicator (shown by App.js while samples decode) -->
                 <div id="sample-status-indicator" class="sample-status">
-                    <span class="sample-status-ico" data-icon="loading" data-icon-size="14"></span>
-                    <span class="sample-status-text">Loading Audio...</span>
+                    <span class="sample-status-ico spinning" data-icon="loading" data-icon-size="14"></span>
+                    <span class="sample-status-label">Audio</span>
+                    <span class="sample-status-text">Loading...</span>
                 </div>
 
                 <!-- Now-Playing pill (shown by App.js when a session is active) -->
@@ -509,16 +510,22 @@
                                 <label for="cof-scale-select">Practice Scale:</label>
                                 <select id="cof-scale-select" class="styled-input pointer"></select>
                             </div>
-                            <p id="cof-scale-notes" class="cof-notes">--</p>
-                            <p id="cof-key-sig" class="cof-key-sig">--</p>
-                            <p id="cof-relative-minor">--</p>
-                            <div class="spacer-bottom-md">
-                                <span class="fb-btn-label">Diatonic Triads</span>
-                                <div id="cof-diatonic-chords" class="button-grid spacer-sm"></div>
-                            </div>
-                            <div id="cof-positions-section" class="spacer-bottom-lg">
-                                <span class="fb-btn-label">Interactive Scale Boxes (CAGED / TNPS)</span>
-                                <div id="cof-position-filters" class="button-grid spacer-sm"></div>
+                            <!-- Empty state: the three rows below are placeholders until a
+                                 key is picked, so show a hint instead of three bare dashes.
+                                 CircleManager.selectKey() swaps them. -->
+                            <p id="cof-empty-hint" class="cof-empty-hint">Pick a key on the circle to see its notes, key signature and diatonic chords.</p>
+                            <div id="cof-key-meta" class="is-hidden">
+                                <p id="cof-scale-notes" class="cof-notes">--</p>
+                                <p id="cof-key-sig" class="cof-key-sig">--</p>
+                                <p id="cof-relative-minor">--</p>
+                                <div class="spacer-bottom-md">
+                                    <span class="fb-btn-label">Diatonic Triads</span>
+                                    <div id="cof-diatonic-chords" class="button-grid spacer-sm"></div>
+                                </div>
+                                <div id="cof-positions-section" class="spacer-bottom-lg">
+                                    <span class="fb-btn-label">Interactive Scale Boxes (CAGED / TNPS)</span>
+                                    <div id="cof-position-filters" class="button-grid spacer-sm"></div>
+                                </div>
                             </div>
                             <div class="cof-actions">
                                 <label class="checkbox-label compact centered"><input type="checkbox" id="cof-intervals-toggle"> Intervals instead of notes</label>

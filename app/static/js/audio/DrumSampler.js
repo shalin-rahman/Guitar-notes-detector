@@ -14,7 +14,7 @@ export default class DrumSampler {
     }
 
     async loadSamples() {
-        await this.sampleManager.loadSamplePack(this.sampleMap);
+        await this.sampleManager.loadSamplePack(this.sampleMap, 'Drums');
     }
 
     scheduleDrumHit(drumType, startTime, velocity = 0.8) {
