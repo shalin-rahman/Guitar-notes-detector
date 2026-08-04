@@ -119,21 +119,17 @@ export default class BackingTrackEngine {
         }
     }
 
+    /** Seconds per straight 16th at the current tempo. */
+    secondsPer16th() {
+        return (60.0 / this.bpm) / 4.0;
+    }
+
     advanceTick() {
-        let secondsPer16thNote = (60.0 / this.bpm) / 4.0;
-        
-        // Handle swing/shuffle timing dynamically
-        if (this.activeProgression.style === "shuffle" || this.activeProgression.style === "swing") {
-            // Very simple swing simulation on 16ths:
-            // 1 e & a -> 1 longer, e shorter, & longer, a shorter
-            if (this.currentTick % 2 === 0) {
-                secondsPer16thNote *= 1.33; 
-            } else {
-                secondsPer16thNote *= 0.67; 
-            }
-        }
-        
-        this.nextTickTime += secondsPer16thNote;
+        // The grid is straight. Swing used to be applied here by stretching
+        // alternate 16ths, which swung the chord placement too and double-counted
+        // once RhythmEngine gained its own swing. RhythmEngine now owns the feel
+        // and displaces individual drum hits instead.
+        this.nextTickTime += this.secondsPer16th();
         this.currentTick++;
         
         // 16 ticks = 4 beats = 1 measure
@@ -162,7 +158,10 @@ export default class BackingTrackEngine {
     scheduleTick(tickIndex, measureNumber, time) {
         // Trigger drums on every 16th note tick
         if (this.rhythmEngine) {
-            this.rhythmEngine.playTick(this.activeProgression.style, tickIndex, time);
+            // The 16th duration lets RhythmEngine place swung hits off the grid.
+            this.rhythmEngine.playTick(
+                this.activeProgression.style, tickIndex, time, 0.8, this.secondsPer16th()
+            );
         }
 
         // Chords usually play on quarter notes (tickIndex % 4 === 0)

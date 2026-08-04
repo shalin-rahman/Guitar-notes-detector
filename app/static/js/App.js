@@ -18,6 +18,7 @@ import AudioSessionManager, { AudioSessionType } from './audio/AudioSessionManag
 
 import SampleManager from './audio/SampleManager.js';
 import DrumSampler from './audio/DrumSampler.js';
+import { GUITAR_TONES } from './audio/GuitarSampler.js';
 import RhythmEngine from './audio/RhythmEngine.js';
 import { Icons, icon, hydrateIcons } from './Icons.js';
 
@@ -102,6 +103,7 @@ class App {
             // Settings
             settingHandedness: document.getElementById('setting-handedness'),
             settingTuning: document.getElementById('setting-tuning'),
+            settingGuitarTone: document.getElementById('setting-guitar-tone'),
             saveSettingsBtn: document.getElementById('save-settings-btn'),
             
             // Dashboard
@@ -158,6 +160,7 @@ class App {
         this.loadFretboardHistory();
         this.renderSampleButtons();
         this.populateTunings();
+        this.populateGuitarTones();
         this.applySettings();
         this.updateDashboard();
         FileManager.init(this.elements.dropZone, this.elements.fileInput, this.tracker);
@@ -404,7 +407,10 @@ class App {
             this.elements.saveSettingsBtn.addEventListener('click', () => {
                 StorageManager.saveSettings({
                     handedness: this.elements.settingHandedness.value,
-                    defaultTuning: this.elements.settingTuning.value
+                    defaultTuning: this.elements.settingTuning.value,
+                    guitarTone: this.elements.settingGuitarTone
+                        ? this.elements.settingGuitarTone.value
+                        : StorageManager.loadSettings().guitarTone
                 });
                 this.applySettings();
                 
@@ -616,7 +622,18 @@ class App {
             tuningSel.value = settings.defaultTuning;
             if (!tuningSel.value && tuningSel.options.length) tuningSel.selectedIndex = 0;
         }
-        
+
+        const toneSel = this.elements.settingGuitarTone;
+        if (toneSel) {
+            toneSel.value = settings.guitarTone;
+            if (!toneSel.value && toneSel.options.length) toneSel.selectedIndex = 0;
+        }
+        // applySettings() also runs before initAudioContext(), when there is no
+        // player yet; the tone is then picked up at construction instead.
+        if (this.player) {
+            this.player.setGuitarTone(settings.guitarTone);
+        }
+
         // Pass handedness to fretboard if method exists
         if (this.fretboard && typeof this.fretboard.setHandedness === 'function') {
             this.fretboard.setHandedness(settings.handedness);
@@ -1096,7 +1113,8 @@ class App {
             this.sessionManager = new AudioSessionManager(this.audioContext);
             this.sampleManager = new SampleManager(this.audioContext);
             
-            this.player = new AudioPlayer(this.sessionManager, this.sampleManager);
+            this.player = new AudioPlayer(this.sessionManager, this.sampleManager,
+                                         StorageManager.loadSettings().guitarTone);
             this.player.onStateChange = (isPlaying) => {
                 // We no longer toggle visual on soundToggle since it was removed
             };
@@ -1247,6 +1265,13 @@ class App {
         `).join('');
         if (this.elements.tuningSelect) this.elements.tuningSelect.innerHTML = options;
         if (this.elements.settingTuning) this.elements.settingTuning.innerHTML = options;
+    }
+
+    populateGuitarTones() {
+        if (!this.elements.settingGuitarTone) return;
+        this.elements.settingGuitarTone.innerHTML = GUITAR_TONES.map(t => `
+            <option value="${t.id}">${t.label}</option>
+        `).join('');
     }
 
     triggerScale(scaleName, customRoot = null) {

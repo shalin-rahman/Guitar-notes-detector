@@ -89,7 +89,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 30px;
+    margin-bottom: 16px;
     padding: 0 10px;
 }
 
@@ -109,8 +109,10 @@ body {
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 2px;
     flex: 1;
+    /* Kept as a safety valve for short viewports; at the tightened spacing all
+       13 items fit and this never engages. */
     overflow-y: auto;
 }
 
@@ -119,8 +121,9 @@ body {
     color: var(--text-muted);
     text-transform: uppercase;
     font-weight: 700;
-    margin: 15px 0 5px 10px;
+    margin: 9px 0 2px 10px;
     letter-spacing: 1px;
+    line-height: 1.2;
 }
 
 .sidebar-footer {
@@ -133,12 +136,15 @@ body {
     background: transparent;
     border: 1px solid transparent;
     color: var(--text-main);
-    padding: 10px 15px;
+    /* Tuned so 13 nav items + 5 section titles fit a ~720 px sidebar column
+       without `.sidebar-nav` scrolling. */
+    padding: 6px 12px;
+    line-height: 1.25;
     border-radius: 8px;
     cursor: pointer;
     font-family: inherit;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     text-align: left;
     transition: all 0.2s;
     display: flex;
@@ -506,7 +512,9 @@ input[type=range] { width: 100%; }
     flex-direction: column;
     gap: 5px;
     padding: 8px 12px;
-    overflow: hidden;
+    /* Scroll here rather than compress `.fb-buttons-row` below its min-height. */
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .fb-topbar {
@@ -591,13 +599,18 @@ input[type=range] { width: 100%; }
     text-overflow: ellipsis;
 }
 
+/* Three panels, three columns. This was `2fr 1fr` with three children, so
+   "CAGED / TNPS Boxes" wrapped into an implicit second row and the two rows
+   split an already-thin `flex: 1` remainder — the ~20 px panels.
+
+   No scrolling anywhere inside here: the panels size to their content and
+   `.fb-page` is the single scroll container if the column overflows. */
 .fb-buttons-row {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr;
     gap: 8px;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+    align-items: start;
+    flex: 0 0 auto;
 }
 
 .fb-btn-group {
@@ -605,8 +618,16 @@ input[type=range] { width: 100%; }
     border: 1px solid var(--glass-border);
     border-radius: 8px;
     padding: 6px;
-    overflow-y: auto;
-    min-height: 0;
+    /* Height follows the buttons. Deliberately no overflow/min-height here —
+       the previous `overflow-y: auto; min-height: 0` is what starved these
+       panels to ~20 px with their own scrollbars. */
+}
+
+.fb-btn-group .button-grid {
+    margin-top: 0;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 5px;
+    align-content: start;
 }
 
 .fb-btn-label {
@@ -1517,6 +1538,15 @@ input[type=range] { width: 100%; }
     overflow-y: auto;
 }
 
+/* Flex children default to `flex-shrink: 1`, so once two or three sections were
+   open the column absorbed the excess by squashing them instead of overflowing —
+   `overflow-y: auto` above never engaged, and `.guide-section`'s own
+   `overflow: hidden` clipped the text. Pin every child to its content height and
+   let `.guide-page` scroll. */
+.guide-page > * {
+    flex: 0 0 auto;
+}
+
 .guide-intro {
     margin-bottom: 10px;
 }
@@ -1717,7 +1747,7 @@ h2.page-title, .dash-card h3, .guide-header h3, .guide-intro h2 {
 .sample-pack-ico { display: inline-flex; align-items: center; pointer-events: none; }
 
 .sidebar-feedback {
-    margin-top: 20px;
+    margin-top: 10px;
     font-size: 0.8rem;
     color: var(--text-muted);
     text-align: center;

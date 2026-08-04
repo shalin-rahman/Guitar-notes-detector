@@ -1,117 +1,411 @@
-Fix global sample-loading state
-Currently guitar and drums can load independently, but the UI needs one accurate aggregate status.
-Show something like:
+detection modes:
+
+                    AHORDIAN AI DETECTION
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+        SONG / RECORDING              LIVE GUITAR
+              │                           │
+       source separation             microphone
+              │                           │
+        ┌─────┴─────┐                 pitch model
+        │           │                     │
+      Chords      Notes              notes/onsets
+        │           │                     │
+        └─────┬─────┘                     │
+              │                           │
+          timeline                 chord inference
+              │                           │
+              └──────────┬────────────────┘
+                         ↓
+                  MUSIC ANALYSIS
+                         ↓
+            Chord / Note / Key / Beat
+                         ↓
+                     Fretboard
+1. For recorded songs
+
+This is where I'd take strong inspiration from Chord ai.
+
+Use:
+
+Source separation → chord recognition → beat/key analysis
+
+Chord ai explicitly uses instrument separation and can recognize chords, beats, keys and voicings.
+
+For Ahordian, you don't need to reproduce all of Chord ai immediately.
+
+Start with:
+
+Audio file
+ ↓
+Separate harmonic/instrumental content
+ ↓
+Chord recognition
+ ↓
+Beat/downbeat detection
+ ↓
+Key estimation
+ ↓
+Chord timeline
+
+Output:
+
+00:00  C
+00:02  Am
+00:04  F
+00:06  G
+
+Key: C Major
+BPM: 118
+
+That would be far more useful than the current note-by-note detector for songs.
+
+2. For live guitar playing
+
+This is a different problem.
+
+If someone plays:
+
+C major chord
+
+the system needs to recognize something like:
+
+E3
+G3
+C4
+E4
+
+and infer:
+
+C major
+
+rather than simply saying:
+
+E3 → G3 → C4 → E4
+
+That's where the current Ahordian approach can be improved.
+
+Use a two-stage system
+Microphone
+   ↓
+Pitch / onset detection
+   ↓
+Detected notes
+   ↓
+Chord inference engine
+   ↓
+C major / Am / G7 / etc.
+
+This distinction is critical.
+
+Pitch detection ≠ chord detection.
+
+3. The best open-source component I'd test first: Spotify Basic Pitch
+
+Spotify Basic Pitch
+
+This is probably the first model I'd benchmark against your current detector.
+
+It is an actual neural automatic music transcription model from Spotify, supports polyphonic instruments, detects pitches and pitch bends, and is relatively lightweight. It works best when analyzing one instrument at a time — which fits Ahordian's "user playing guitar" use case well.
+
+It can give you:
 
 Audio
-✓ Guitar 6/6
-✓ Drums 5/5
+ ↓
+Basic Pitch
+ ↓
+notes + onset + duration + pitch bend
 
-or:
-Audio
-⚠ Guitar 6/6 · Drums 3/5
-Don't let one loader overwrite the other's status.
------------------
-Fix drum fallback
-Verify/fix:
+Then Ahordian can infer:
 
-Kick
-Snare
-Hi-hat
-Open Hi-hat
-Ride
-Especially open-hihat and ride must actually produce sound and must not leave unstarted/orphaned audio nodes.
+notes = [C, E, G]
+        ↓
+Chord classifier
+        ↓
+C major
+Very important
 
------------------
-Finish Detection Replay QA
-Verify:
-Detect:
-C4 → E4 → G4 → A4
+I would not replace the whole application with Basic Pitch.
 
-Replay:
-C4 → E4 → G4 → A4
+Use it as a detection engine.
 
-with approximately the same timing.
+4. For recorded multi-instrument songs: MT3 is another candidate
 
-Also:
+Google Magenta MT3
 
-maximum 64 notes
-empty history disables Replay
-Replay → Stop works
-Replay → another audio feature stops Replay
-Replay → navigation doesn't leave audio running
-repeated Replay doesn't create overlapping playback
-fretboard highlights the correct notes
+MT3 is designed specifically for multi-instrument automatic music transcription. It can transcribe multiple instruments from a song rather than assuming a single isolated instrument.
 
---------------------------------------------
-Remove remaining functional emoji
-You've already replaced navigation icons with SVGs.
-Finish the same treatment for important UI controls.
+So I'd benchmark:
 
-Prefer:
+Input	First choice
+Clean live guitar	Basic Pitch
+Guitar chord recording	Basic Pitch + chord inference
+Full song	MT3 / source separation + chord model
+Chord timeline	Dedicated chord recognition
+Live chord	Basic Pitch + temporal chord inference
 
-[ SVG ] Jam Station
-[ SVG ] Replay
-[ SVG ] Save
-[ SVG ] Clear
-[ SVG ] Guide
+Don't assume MT3 will automatically give you the best chord labels. It's fundamentally a transcription system, whereas Chord ai's product is explicitly optimized around chord/beat/key interpretation.
 
-instead of mixing:
+5. Don't use Basic Pitch alone for chords
 
-🎸
-🎵
-👂
-📚
-💾
+This is the trap I want the AI developer to avoid.
 
-The app should have one visual language.
-----------------------
-Make Jam Station visually finished
-Keep the existing architecture, but make the UI clearly communicate:
-JAM STATION
-Virtual Band
+If Basic Pitch returns:
 
-Progression     Key       Style
+C3
+G3
+C4
+E4
 
-Tempo
-──────●──────── 120 BPM
+you still need to determine:
 
-Guitar
-───────●───────
+C
 
-Drums
-─────●─────────
+And if it returns:
 
-Solo Guide
-Pentatonic
+A2
+E3
+A3
+C4
 
-CURRENT CHORD
-      C
+you need:
 
-[ ▶ PLAY ] [ ■ STOP ]
+Am
 
-This is a polish task, not an architectural rewrite.
+So add a Chord Inference Engine.
 
---------------------
-Update IMPLEMENTATION_PLAN.md
+Something like:
 
+Detected notes
+      ↓
+Normalize pitch classes
+      ↓
+Remove low-confidence notes
+      ↓
+Temporal aggregation
+      ↓
+Chord template / ML classifier
+      ↓
+Candidate chords
+      ↓
+Music-theory scoring
+      ↓
+Best chord
 
+For example:
 
+C E G
+↓
+C major       0.94
+Am            0.21
+Em            0.18
+↓
+C
+6. For solo detection, do NOT treat it like chord detection
 
+This is another important point from the review.
 
+If the user plays a solo:
 
+E → G → A → B → D → E
 
+you want:
 
+E4  0.18s
+G4  0.22s
+A4  0.15s
+B4  0.31s
+D5  0.18s
+E5  0.42s
 
+plus:
 
+onset
+offset
+duration
+pitch
+confidence
+pitch bend
+vibrato if possible
 
+That's automatic music transcription, not chord recognition.
 
+Basic Pitch is much more appropriate here. It specifically produces note events and supports pitch bends.
 
+7. The killer feature I'd add to Ahordian
 
+Instead of one "Detector", I'd redesign it conceptually as:
 
+AI MUSIC DETECTOR
 
+What are you analyzing?
 
+[ SONG / RECORDING ]
+[ LIVE GUITAR ]
+[ SOLO / MELODY ]
+[ CHORD ]
+SONG
+Upload / drag audio
 
+AI Analysis
+────────────────────────
+Key       C Major
+BPM       118
+Time      4/4
 
+CHORDS
+0:00 C
+0:03 Am
+0:06 F
+0:09 G
 
+[▶ Play]
+LIVE GUITAR
+🎙 Listening...
 
+Detected:
+     C Major
 
+Notes:
+C3  E3  G3  C4
+
+Confidence: 94%
+
+Suggested position:
+     Open C
+SOLO
+LIVE TRANSCRIPTION
+
+E4 ────
+G4 ──
+A4 ─────
+B4 ──
+D5 ─────
+
+[Replay]
+[Save]
+[Export MIDI]
+
+That's much closer to what the reviewer is asking for.
+
+8. And add confidence — very important
+
+Don't present uncertain AI predictions as facts.
+
+Instead of:
+
+C Major
+
+show:
+
+C Major
+94% confidence
+
+And if:
+
+C Major  47%
+Am        42%
+
+show:
+
+Uncertain — likely C Major
+
+This will make Ahordian feel significantly more trustworthy.
+
+9. My recommended architecture
+
+I'd evolve Ahordian toward:
+
+                 Audio Input
+                     │
+          ┌──────────┴───────────┐
+          │                      │
+      Live Mic              Audio File
+          │                      │
+          └──────────┬───────────┘
+                     ↓
+              Audio Preprocessor
+                     │
+          ┌──────────┼──────────┐
+          │          │          │
+       Source     Basic Pitch   Beat
+     Separation       / MT3    Tracker
+          │          │          │
+          └──────────┼──────────┘
+                     ↓
+              Feature Extraction
+                     │
+        ┌────────────┼─────────────┐
+        ↓            ↓             ↓
+    Note Events   Chord Model   Key Model
+        │            │             │
+        └────────────┼─────────────┘
+                     ↓
+              Confidence Layer
+                     ↓
+               Music Context
+                     ↓
+        ┌────────────┼────────────┐
+        ↓            ↓            ↓
+    Fretboard     Chords       Timeline
+
+This is the architecture I'd recommend rather than trying to keep improving the current pitch detector with thresholds.
+
+My priority recommendation
+P0 — benchmark first
+
+Before changing Ahordian, create a test set:
+
+10 clean single-note guitar recordings
+10 guitar chords
+10 guitar chord progressions
+10 guitar solos
+10 full songs
+
+Run:
+
+Current detector vs Basic Pitch vs MT3 where appropriate.
+
+Measure:
+
+Note accuracy
+Onset accuracy
+Chord accuracy
+False positives
+Latency
+CPU/RAM
+
+Then you have actual evidence.
+
+P1 — implement Basic Pitch for solo/live note detection
+
+This is the easiest high-value improvement.
+
+P2 — implement chord inference
+
+Basic Pitch output → chord recognition.
+
+P3 — dedicated recorded-song chord pipeline
+
+Source separation + chord model + beat/key.
+
+P4 — UI
+
+Turn Detector into:
+
+Song Analysis / Live Guitar / Solo Transcription / Chord Detection
+
+One thing I would NOT do
+
+I would not attempt to clone Chord ai's entire AI stack.
+
+We don't know their proprietary model implementation. Their public description says they use "recent deep learning algorithms," but it doesn't provide enough technical detail to reproduce their exact system.
+
+Instead:
+
+Use Chord ai as the product/UX benchmark, and use open models as Ahordian's underlying technology.
+
+The strongest starting combination I see is:
+
+Basic Pitch + dedicated chord inference + beat/key detection + optional source separation.

@@ -8,6 +8,9 @@ export default class StorageManager {
         // values come from there, and a value matching none of them leaves the
         // select rendering blank.
         defaultTuning: 'Standard',
+        // A GUITAR_TONES id from audio/GuitarSampler.js — also the directory name
+        // under static/audio/guitar/.
+        guitarTone: 'steel',
         metronome: {
             bpm: 120,
             sound: 'beep',

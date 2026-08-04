@@ -2,18 +2,23 @@ import AppConfig from './AppConfig.js';
 import GuitarSampler from './audio/GuitarSampler.js';
 
 export default class AudioPlayer {
-    constructor(audioSessionManager, sampleManager) {
+    constructor(audioSessionManager, sampleManager, guitarTone) {
         this.sessionManager = audioSessionManager;
         this.ctx = audioSessionManager.ctx;
         this.isMuted = false;
         this.onStateChange = null;
         this.activeVoices = [];
-        
-        this.sampler = new GuitarSampler(this.ctx, sampleManager);
+
+        this.sampler = new GuitarSampler(this.ctx, sampleManager, guitarTone);
     }
 
     async loadSamples() {
         await this.sampler.loadSamples();
+    }
+
+    /** Settings → Guitar Tone. Loads the tone's pack on first selection. */
+    async setGuitarTone(tone) {
+        await this.sampler.setTone(tone);
     }
 
     setMuted(val) {

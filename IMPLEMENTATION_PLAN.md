@@ -12,11 +12,20 @@ browser download):
 python -X utf8 qa_phase1.py     # session lifecycle, replay, mute/volume, Now Playing
 python -X utf8 qa_phase2.py     # visual pass: 13 screens, no functional emoji
 python -X utf8 qa_tasks.py      # aggregate sample status, all 5 drum voices audible
+python -X utf8 qa_verify.py     # synth fallback direct, panel/nav/guide geometry, highlight routing
+python -X utf8 qa_tone.py       # Settings -> Guitar Tone: both packs, lazy load, persistence
 ```
 
-Current results: **qa_phase1 43/44**, **qa_phase2 30/30**, **qa_tasks 17/17**. The one
-qa_phase1 failure is the drum-WAV 404s — the open decision at the bottom of this file,
-not a code defect.
+The `qa_*.py` scripts are **not tracked in this repo** — they live in the Claude Code
+session scratchpad. Copy them next to the repo root before running.
+
+Current results: **qa_phase1 44/44**, **qa_phase2 30/30**, **qa_tasks 15/15**,
+**qa_verify 30/30**, **qa_tone 25/25** — 144 checks, no known failures.
+
+Two harness bugs were fixed to get there, both stale assertions rather than product
+defects: qa_phase1 hardcoded a 6-sample guitar pack (now 19), and qa_tasks measured the
+"unknown voice is silent" window with no settling gap, so it was reading the tail of the
+~2 s ride sample that the previous assertion had just fired.
 
 ---
 
@@ -76,7 +85,7 @@ when drums 404'd.
 Now `SampleManager` accumulates across packs (`_expected` / `_loaded` / `_pending`) and
 reports a verdict only when `_pending` reaches 0. It also keeps a `packs` map keyed by
 label, exposed as `getPackProgress()`, so the UI can render one aggregate line with a
-per-pack breakdown: `AUDIO  ✓ Guitar 6/6  ⚠ Drums 0/5`. `GuitarSampler` and
+per-pack breakdown: `AUDIO  ✓ Guitar 19/19  ✓ Drums 5/5`. `GuitarSampler` and
 `DrumSampler` pass their labels. `App.renderSampleStatus()` renders it from classes only
 (`state-ok` / `state-warn` / `state-error`, `.sample-pack.incomplete`).
 
@@ -86,29 +95,164 @@ fallback must not conceal missing production assets.
 The `loaded++` increments inside concurrent async callbacks are safe only because JS is
 single-threaded per tick; that is now stated in a comment at the site.
 
-*Verified:* qa_tasks — both packs listed with their own SVG mark, guitar reports 6/6
-while drums report 0/5, the drum chip carries `.incomplete`, and the aggregate state is
-`warn`/`error` rather than `ok`.
+*Verified:* qa_tasks — both packs listed with their own SVG mark. With both packs now
+shipped it reports Guitar 19/19 and Drums 5/5 and the aggregate state is `ok`; the
+incomplete-pack branch (`.incomplete` chip, `warn`/`error` aggregate) was the state
+verified while the drum WAVs were absent.
 
 ### Group 3.3 (partial) / tasks.txt 2 — Drum synth fallback
 
 `playSynthDrum()` had branches for `kick`, `snare`, `hihat` only. For `ride` and
 `hihat-open` it built and connected an oscillator and gain, then returned without
 `start()` — silent, and leaking a connected node per hit. All five voices now have
-branches, and the trailing `else` disconnects both nodes so an unknown voice cannot
-leave an unstarted oscillator wired into the graph.
+branches, and the unknown-voice branch now builds **nothing at all** rather than creating
+and connecting nodes before discovering it has no case.
 
-*Verified:* qa_tasks measures peak amplitude on `sessionManager.masterGain` through an
-`AnalyserNode` while each voice fires — kick 0.88, snare 0.88, hihat 0.44, hihat-open
-0.39, ride 0.32. An unknown voice (`cowbell`) throws nothing and measures 0.00000.
+It was also rebuilt on a noise source. Every voice except the kick body is now filtered
+white noise from one shared, cached 2 s buffer (a deterministic LCG, not `Math.random()`,
+so the timbre is byte-identical across runs and the peak assertions cannot go flaky).
+The previous version had no noise at all — a 250 Hz triangle for the snare and square
+waves for the cymbals — which is why it read as a test tone rather than a drum.
+
+*Verified:* `qa_verify.py` calls `playSynthDrum` **directly**, because the shipped sample
+buffers now shadow the fallback in `scheduleDrumHit` and qa_tasks therefore exercises the
+sample path. Peaks: kick 0.95, snare 0.53, hihat 0.56, hihat-open 0.63, ride 0.41.
+`cowbell` throws nothing and measures exactly 0.00000.
+
+### Group 3.3 — Drum sample assets (was blocked)
+
+Resolved. Five WAVs from **Pearl Master Studio Pack 1 by enoe**, via
+[Oramics sampled](https://oramics.github.io/sampled/DRUMS/pearl-master-studio/), CC BY
+3.0. Attribution is mandatory under that licence and is recorded in
+`static/audio/LICENSES.md` with a reusable credit block. `download_samples.py` fetches
+them (it previously only *printed* manual instructions).
+
+*Verified:* qa_phase1 network capture — all 5 drum requests return 200, which cleared the
+long-standing 43/44 failure. qa_tasks reports Drums 5/5.
 
 ### Group 3.2 — Guitar samples
 
 `download_samples.py` is now path-independent (`BASE_DIR = Path(__file__).resolve().parent`),
-so it no longer silently writes to the wrong tree when run from the repo root. All six
-CC0 FatBoy nylon MP3s are present.
+so it no longer silently writes to the wrong tree when run from the repo root. `main()`
+also collects failures and exits non-zero, because a missing sample silently degrades the
+app to the synth fallback rather than failing visibly.
 
-*Verified:* qa_phase1 network capture — all six guitar requests return 200.
+The pack went from 6 to 19 notes, and the soundfont changed — see "Acoustic guitar tone".
+
+*Verified:* qa_phase1 network capture — all 19 guitar requests return 200.
+
+### Acoustic guitar tone
+
+The user reported the acoustic guitar sounded wrong. Three separate defects, not one:
+
+1. **Six samples, nothing above E4.** One per open string, so every note past the 12th
+   fret of the high E was stretched up from E4 — up to a full octave. That upward
+   `playbackRate` shift is where the chipmunk artefact came from. Now 19 notes at roughly
+   3-semitone spacing (E2…C6), so nothing shifts more than ~1.5 semitones.
+2. **Nearest-sample chosen in linear Hz.** `Math.abs(targetFreq - sampleFreq)` is a
+   linear metric on a logarithmic scale, so it systematically preferred the higher
+   neighbour. Now `Math.abs(12 * Math.log2(target / sample))` — actual semitone distance.
+3. **Asymmetric cutoff.** `diff < sampleFreq * 0.3` was ~+4.7 semitones upward but far
+   less downward, for the same reason. Now a symmetric `<= 3` semitones.
+
+### Guitar Tone setting — both soundfonts ship
+
+Fixing the density above also changed the soundfont, from FatBoy nylon to MusyngKite
+steel. That is a timbre change, not a defect fix, so rather than choose for the user both
+tones now ship and Settings → **Guitar Tone** selects between them (both CC0, both via
+`midi-js-soundfonts`): `steel` = MusyngKite `acoustic_guitar_steel` (default, bright),
+`nylon` = FatBoy `acoustic_guitar_nylon` (mellow/classical). 19 notes each.
+
+Three things this design has to get right:
+
+1. **Namespaced buffer keys.** `SampleManager.buffers` is one flat `Map` shared by every
+   pack, so two guitar packs covering the same note names would collide — the second
+   loaded would silently overwrite the first, and switching back would play the wrong
+   timbre with no error anywhere. Every guitar buffer key is therefore
+   `guitar:<tone>:<note>`; `GuitarSampler.keyFor()` is the only place that shape is built.
+2. **Lazy, memoised loading.** `GuitarSampler._loads` maps tone id → `loadSamples()`
+   promise, so a cold start fetches only the chosen pack (19 files, not 38) and switching
+   back to an already-heard tone is instant and refetch-free.
+3. **Two application paths.** `App.applySettings()` runs in the constructor, before
+   `initAudioContext()` creates `this.player`, so the tone is applied by a guarded
+   `if (this.player) this.player.setGuitarTone(...)` for live changes *and* passed into
+   `new AudioPlayer(...)` at construction for cold starts.
+
+The `<option>` list is generated from the exported `GUITAR_TONES`, so a stored value can
+never fail to match one and leave the select rendering blank.
+
+`static/audio/guitar/acoustic/` was renamed to `guitar/steel/`; `guitar/nylon/` is new.
+
+*Verified:* qa_tone — 25/25. Steel and nylon `A3` have different waveform fingerprints,
+nylon stays unfetched until selected, steel's 19 buffers survive the switch, the choice
+persists across reload, and an unsampled note (`A#3`) pitch-shifts from a nylon neighbour
+at rate 1.0595 rather than dropping to the synth.
+
+### RhythmEngine groove + double-swing bug
+
+Patterns are velocity maps over 16 steps rather than 1/0 hit maps, and all five voices
+are used. Before: `shuffle`/`swing` were plain aliases of `blues`, `straight` aliased
+`rock`, and `playTick` only ever fired kick/snare/hihat at a flat velocity — so
+`hihat-open` and `ride` were dead code and every triplet-feel style played straight.
+There are now six genuinely distinct patterns.
+
+Swing was also being **applied twice**. `BackingTrackEngine.advanceTick()` swung by
+stretching alternate 16ths of the grid itself (`*= 1.33` / `*= 0.67`), which dragged
+chord placement along with it; `RhythmEngine` then had its own feel. The grid is straight
+now (`secondsPer16th()`) and `RhythmEngine` owns the feel, displacing individual drum
+hits via `swingOffsetIn16ths()`. Do not reintroduce grid-level swing.
+
+`playTick`'s `sixteenthDur` defaults to 0, which collapses every offset to zero — a
+caller that cannot supply the tempo gets a straight feel rather than wrong timing.
+
+### Fretboard panel density
+
+The three panels (SCALES & RAAGS, CAGED / TNPS BOXES, BENGALI PATTERNS) had collapsed to
+~20 px with their own scrollbars. **Two** compounding defects, not the one reported:
+
+- `.fb-buttons-row` was `grid-template-columns: 2fr 1fr` with **three** children, so the
+  third wrapped into an implicit second row and the two rows split an already-thin
+  `flex: 1` remainder. Now `2fr 1fr 1fr`.
+- `.fb-btn-group` was `overflow-y: auto; min-height: 0`.
+
+The requirement is no scrolling anywhere *inside* these panels: they size to their
+content (`flex: 0 0 auto`, no `overflow`, no `min-height`) and `.fb-page` is the single
+scroll container.
+
+*Verified:* qa_verify — all three panels share one row top (427 px, so no implicit second
+row), neither the panels nor their inner `.button-grid`s scroll, and every populated panel
+is ≥ 60 px (measured 274 px / 147 px). "CAGED / TNPS Boxes" measures 32 px on a cold load
+because `#fb-position-filters` is empty until `CircleManager.updatePositionFilters()`
+mirrors the buttons across — driving that grows it to 247 px, still without scrolling.
+
+### Sidebar density
+
+`.nav-btn` padding 10px 15px → 6px 12px, `font-size` 0.95 → 0.9rem, explicit
+`line-height: 1.25`; `.nav-section-title` margin 15px/5px → 9px/2px; logo margin-bottom
+30 → 16px. `.sidebar-nav` keeps `overflow-y: auto` as a safety valve for short viewports,
+but at this spacing it never engages.
+
+*Verified:* qa_verify — 13 nav destinations (12 in `.sidebar-nav`, Settings in
+`.sidebar-footer`) plus 5 section titles, with `scrollHeight === clientHeight` on both
+`.sidebar-nav` (838 px) and `.sidebar`.
+
+### User Guide content cut off after expanding multiple sections
+
+Flex children default to `flex-shrink: 1`, so once two or three sections were open the
+column absorbed the excess by squashing them instead of overflowing — `.guide-page`'s
+`overflow-y: auto` never engaged, and `.guide-section`'s own `overflow: hidden` clipped
+the text. Fixed by pinning every child to its content height (`.guide-page > * { flex: 0 0 auto }`).
+
+*Verified:* qa_verify — with 4 of 8 sections expanded, zero `.guide-section` elements have
+`scrollHeight > clientHeight`, and every `.guide-page` child computes `flex-shrink: 0`.
+
+### Fretboard highlight routing
+
+*Verified:* qa_verify — three `FretboardManager` instances exist (`guitar-fretboard`,
+`scale-exp-fretboard`, `chord-exp-fretboard`); exactly one reports `isVisible()` on the
+fretboard screen; a `flashNotes(['C3','E3','G3'])` lights 3 `.fb-flash` nodes on the
+visible board and **0 on either off-screen board**; and the flash is transient — 0
+`.fb-flash` remain after the duration elapses.
 
 ### Group 4 — Incorrect label
 
@@ -165,9 +309,12 @@ required.
 ## Screenshot review — complete
 
 All 13 qa_phase2 screens were read. Layout is correct on every one; no regression from the
-inline-style removal. The "SCALES & RAAGS" / "BENGALI PATTERNS" mid-row clipping is **by
-design** — `.fb-btn-group` (style.css:601) is `overflow-y: auto; min-height: 0`, a
-deliberate scroll container inside a flex parent.
+inline-style removal.
+
+~~The "SCALES & RAAGS" / "BENGALI PATTERNS" mid-row clipping is **by design** —
+`.fb-btn-group` is `overflow-y: auto; min-height: 0`, a deliberate scroll container
+inside a flex parent.~~ **Wrong, and overruled — this was a real defect.** See
+"Fretboard panel density" under Done.
 
 Two real defects were found in the review, both root-caused rather than patched at the
 call site:
@@ -239,21 +386,14 @@ Four things the screenshot review surfaced as taste rather than defect, now clos
 headings; after clicking a wheel segment the title reads `C Major (Ionian)` with 7 note
 pills, 7 diatonic triads, and a populated signature; the metronome cluster measures 37 px
 inside a 58 px topbar with a 46 px BPM field; and the three reworked nav glyphs are
-mutually distinct at 20 px. qa_phase1 43/44, qa_phase2 30/30, qa_tasks 17/17 — no
+mutually distinct at 20 px. qa_phase1 44/44, qa_phase2 30/30, qa_tasks 15/15, qa_verify 30/30 — no
 regression.
 
 ---
 
 ## Blocked — needs your decision
 
-**Drum sample assets (Group 3.3).** Five WAVs are referenced and no source is defined;
-`LICENSES.md:10` says only that they are "intended to be user-supplied". Until a CC0
-pack is named, `download_samples.py` cannot be extended and `LICENSES.md` cannot be
-completed, and qa_phase1 stays at 43/44.
-
-The synth fallback covers all five voices and is verified audible, so the app is usable
-— but Acoustic Audio is not a complete feature while the production assets are absent,
-and the status line now says so instead of hiding it.
+*(none — the drum-asset block below was resolved; see Group 3.3 in Done.)*
 
 ---
 
