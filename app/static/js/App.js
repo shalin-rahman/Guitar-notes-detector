@@ -1159,6 +1159,26 @@ class App {
         }
     }
 
+    /**
+     * Every screen owns its own FretboardManager, so "highlight the note that is
+     * sounding" has to resolve the board the user is actually looking at. Sending it to
+     * `this.fretboard` unconditionally meant Scale Explorer, Chord Explorer and the Tab
+     * Player animated a board on a hidden screen.
+     */
+    visibleFretboards() {
+        return [this.fretboard, this.chordFretboard, this.scaleFretboard]
+            .filter(fb => fb && fb.isVisible());
+    }
+
+    /**
+     * Flashes a sounding note (or chord) on every visible board. `stagger` spreads a
+     * chord out like a strum. Deliberately does nothing when no board is on screen —
+     * this is feedback, not state, so there is nothing to queue up for later.
+     */
+    flashPlayedNotes(notes, duration = 800, stagger = 0) {
+        this.visibleFretboards().forEach(fb => fb.flashNotes(notes, duration, stagger));
+    }
+
     triggerFretboardNote(noteInput, duration = 800) {
         this.initAudioContext();
         let targetNote = noteInput.toUpperCase().trim();
@@ -1171,7 +1191,10 @@ class App {
 
         if (!targetNote) return;
 
-        const pos = this.fretboard.showNote(targetNote, duration);
+        // Position comes from the main board (it carries the user's tuning); the visible
+        // boards get the animation, which may or may not include the main one.
+        const pos = this.fretboard.findBestPosition(targetNote);
+        this.flashPlayedNotes(targetNote, duration);
         if (pos) {
             if (this.elements.positionInfo) {
                 this.elements.positionInfo.textContent = `${targetNote} → String ${pos.string + 1}, Fret ${pos.fret}`;

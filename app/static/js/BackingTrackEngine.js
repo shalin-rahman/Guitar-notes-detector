@@ -228,6 +228,19 @@ export default class BackingTrackEngine {
         // Base octave for backing chords
         const baseOctave = 3;
         
+        // Light the chord tones up on the fretboard as the strum lands. Notes are
+        // scheduled on the audio clock, ahead of now, so the visual has to be delayed by
+        // the same lead time or it fires early. Skipped when the board is off screen —
+        // a jam can keep running while the user navigates away.
+        if (this.fretboard && this.fretboard.isVisible()) {
+            const leadMs = Math.max(0, (startTime - this.player.ctx.currentTime) * 1000);
+            const voiced = chordData.notes.map((n, i) => `${n}${i > 2 ? 4 : 3}`);
+            setTimeout(
+                () => this.fretboard.flashNotes(voiced, duration * 1000 * 0.6, strumDelay * 1000),
+                leadMs
+            );
+        }
+
         chordData.notes.forEach((noteClass, index) => {
             const time = startTime + (index * strumDelay);
             // Quick and dirty octave assignment for chord voicings

@@ -1,5 +1,11 @@
 import AppConfig from './AppConfig.js';
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+// Must match the `.fb-flash.is-fading` transition duration in style.css: the class
+// starts the fade, this decides when the node is safe to remove.
+const FB_FADE_MS = 220;
+
 export default class FretboardManager {
     constructor(containerId, initialTuning = null) {
         this.container = document.getElementById(containerId);
@@ -10,6 +16,16 @@ export default class FretboardManager {
         this.showNoteNames = true;
         this.handedness = 'right';
         this.render();
+    }
+
+    /**
+     * True when this board is actually on screen. Every screen owns its own
+     * FretboardManager, so playback highlights are routed by visibility
+     * (App.visibleFretboards()) — flashing the fretboard-screen board while the user
+     * is on Scale Explorer highlights nothing they can see.
+     */
+    isVisible() {
+        return !!(this.container && this.container.getClientRects().length);
     }
 
     setHandedness(mode) {
@@ -196,20 +212,6 @@ export default class FretboardManager {
         this.render();
     }
 
-    showVoicing(positions) {
-        this.persistentNotes = [];
-        positions.forEach(p => {
-            const note = this.getNoteAt(p.s, p.f);
-            if (note) {
-                this.persistentNotes.push({ 
-                    note: note, 
-                    pos: { string: p.s, fret: p.f, isRoot: false, interval: null } 
-                });
-            }
-        });
-        this.render();
-    }
-
     clearOverlay() {
         this.persistentNotes = [];
         this.render();
@@ -233,13 +235,6 @@ export default class FretboardManager {
             stringEl.setAttribute('y1', originalY);
             stringEl.setAttribute('y2', originalY);
         }, 150);
-    }
-
-    showNote(noteName, duration = 800) {
-        const pos = this.findBestPosition(noteName);
-        if (pos) {
-            this.drawNoteIndicator(noteName, pos, false, duration);
-        }
     }
 
     drawNoteIndicator(noteName, pos, isPersistent = false, duration = 800) {
@@ -331,15 +326,47 @@ export default class FretboardManager {
             }
         });
         
-        group.appendChild(indicator);
-
+        // A sounding note pops in, throws a ripple, then fades out. The animation lives
+        // in CSS (`.fb-flash` / `.fb-ripple` in style.css) so it runs off the main thread
+        // instead of a per-frame setAttribute loop — playback fires these every ~300 ms.
         if (!isPersistent) {
+            const ripple = document.createElementNS(SVG_NS, "circle");
+            ripple.setAttribute("cx", x);
+            ripple.setAttribute("cy", y);
+            ripple.setAttribute("r", radius);
+            ripple.setAttribute("fill", "none");
+            ripple.setAttribute("stroke", noteColor);
+            ripple.setAttribute("stroke-width", "2.5");
+            ripple.classList.add("fb-ripple");
+            // transform-box: view-box is set in CSS, so the origin is in viewBox units.
+            // Both nodes scale, so both need their own origin — an SVG element's default
+            // origin is the viewBox corner, which would fling the ripple off-screen.
+            ripple.style.transformOrigin = `${x}px ${y}px`;
+            indicator.insertBefore(ripple, circle);
+
+            indicator.style.transformOrigin = `${x}px ${y}px`;
+            indicator.classList.add("fb-flash");
+
             setTimeout(() => {
-                circle.setAttribute("fill", "rgba(255,215,0,0.2)");
-                circle.setAttribute("r", "6");
-                setTimeout(() => indicator.remove(), duration / 4);
+                indicator.classList.add("is-fading");
+                setTimeout(() => indicator.remove(), FB_FADE_MS);
             }, duration);
         }
+
+        group.appendChild(indicator);
+    }
+
+    /**
+     * Flashes several notes as one gesture. `stagger` reproduces a strum: the notes
+     * light up in sequence rather than all at once, matching how BackingTrackEngine
+     * delays each string by 15 ms.
+     */
+    flashNotes(noteNames, duration = 800, stagger = 0) {
+        if (!Array.isArray(noteNames)) noteNames = [noteNames];
+        noteNames.forEach((n, i) => {
+            if (stagger > 0) setTimeout(() => this.showNote(n, duration), i * stagger);
+            else this.showNote(n, duration);
+        });
     }
 
     showNote(noteName, duration = 800) {

@@ -166,13 +166,18 @@ export default class TabPlayer {
         }
 
         const noteGroup = notes[this.currentNoteIndex];
+        // Highlights go through App.flashPlayedNotes so they land on whichever board is
+        // on screen. The old showScale() call rewrote the *persistent* overlay of the
+        // fretboard screen — invisible from here, and it destroyed the scale the user had
+        // left displayed there.
+        const beatMs = (60000 / this.currentSong.bpm) / this.speed;
         if (Array.isArray(noteGroup)) {
             // Play power chord or dyad
             noteGroup.forEach(n => this.app.player.playNote(n));
-            this.app.fretboard.showScale(noteGroup.map(n => n.replace(/[0-9]/g, '')));
+            this.app.flashPlayedNotes(noteGroup, beatMs * 0.7, 25);
         } else {
             this.app.player.playNote(noteGroup);
-            this.app.fretboard.showNote(noteGroup);
+            this.app.flashPlayedNotes(noteGroup, beatMs * 0.7);
         }
 
         this.currentNoteIndex++;

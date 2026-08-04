@@ -805,6 +805,46 @@ input[type=range] { width: 100%; }
 .fb-nut { stroke: #ddd; stroke-width: 6; }
 .fb-inlay { fill: rgba(255, 255, 255, 0.15); }
 
+/* A note that is currently sounding. Drawn by FretboardManager.drawNoteIndicator()
+   for transient (non-persistent) notes only — the scale/voicing overlay must stay
+   still while notes flash on top of it.
+   transform-box: view-box lets the inline transform-origin be given in viewBox units,
+   which is the only coordinate space drawNoteIndicator knows. */
+.fb-flash {
+    transform-box: view-box;
+    animation: fb-note-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transition: opacity 220ms ease, transform 220ms ease;
+}
+.fb-flash.is-fading {
+    opacity: 0;
+    transform: scale(0.75);
+    animation: none; /* the pop has finished; let the transition own the exit */
+}
+@keyframes fb-note-pop {
+    from { opacity: 0; transform: scale(0.4); }
+    60%  { transform: scale(1.18); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* Expanding halo, so a flash reads as an attack even where a persistent marker
+   already sits under it. pointer-events: none keeps the marker clickable.
+   Scales via transform rather than animating `r`, because the SVG geometry properties
+   are not animatable from CSS in every engine. */
+.fb-ripple {
+    pointer-events: none;
+    transform-box: view-box;
+    animation: fb-ripple-out 520ms ease-out forwards;
+}
+@keyframes fb-ripple-out {
+    from { opacity: 0.85; transform: scale(1);   stroke-width: 2.5; }
+    to   { opacity: 0;    transform: scale(2.4); stroke-width: 0.8; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fb-flash { animation: none; }
+    .fb-ripple { display: none; }
+}
+
 .fb-note-indicator {
     cursor: pointer;
 }
