@@ -476,7 +476,7 @@ nothing in the repo says otherwise. Q-3 exists so the next reader does not repea
 |---|---|---|---|---|
 | Q-1 | **Commit the `qa_*.py` suites under `tests/`** with their existing names — `qa_phase1`, `qa_phase2`, `qa_tasks`, `qa_verify`, `qa_tone`, `qa_practice`, and (found during the move) `qa_cof`, `qa_mic_session` — plus a short `tests/README.md` giving the server command and each suite's expected count. Keep the names: renaming breaks the mapping between a file and its documented pass count, and the natural-looking splits (`qa_audio`/`qa_ui`/…) do not match how the suites are actually organised — `qa_phase2` is 13 screens of visual assertions across every feature, `qa_verify` mixes synth fallback, panel geometry, nav and highlight routing. One confirming run after the move; no new assertions. | done | ~20k | — |
 | Q-2 | **Stop tracking bytecode.** Two `app/__pycache__/*.pyc` files are tracked; `.gitignore` covers `.venv/` but has no `__pycache__/` entry. Add it and `git rm --cached` the two files. | done | ~4k | — |
-| Q-3 | **Say what setup actually is.** README states that a fresh checkout already contains every sample and that `download_samples.py` is *re-fetch if assets are missing or corrupt*, explicitly not a required step. Then make the missing-asset path name its own remedy: `SampleStatus.PARTIAL` / `ERROR` already reach the UI through `onStatusChange` → `App.renderSampleStatus()`, so the fallback is not silent, but the text is generic where it could say *run `python app/download_samples.py`*. Browser-verify by removing one sample and reading the indicator. | **README half done**; UI text remains | 10–15k left | — |
+| Q-3 | **Say what setup actually is.** README states that a fresh checkout already contains every sample and that `download_samples.py` is *re-fetch if assets are missing or corrupt*, explicitly not a required step. Then make the missing-asset path name its own remedy: `SampleStatus.PARTIAL` / `ERROR` already reach the UI through `onStatusChange` → `App.renderSampleStatus()`, so the fallback is not silent, but the text is generic where it could say *run `python app/download_samples.py`*. Browser-verify by removing one sample and reading the indicator. | done | ~15k | — |
 | Q-4 | **CI, if wanted.** Only after Q-1, and not free: the suites drive real Chrome via `channel="chrome"` and assert audio levels through an `AnalyserNode`, so a runner needs system Chrome *and* an audio device, and the timing-sensitive checks (the ~2.5 s settling gap) are the classic shared-runner flake. Expect to quarantine the audio-level assertions and run the geometry/nav ones green first. | 2–3 h | 40–60k | Q-1 |
 
 **Q-1 and Q-2 are done** (2026-08-04) — see below. Q-3 and Q-4 remain, and both are
@@ -510,9 +510,9 @@ re-fetch tool that no-ops on a clean checkout, that the drum kit is CC-BY 3.0 an
 attribution is a licence condition, and it points at `tests/` for verification. It also flags
 that the documented port (8000) is not the port the suites hardcode (8123).
 
-**Still open:** the in-app half. `App.renderSampleStatus()` reports `PARTIAL` / `ERROR`
-generically where it could name the remedy (`python app/download_samples.py`), and that needs
-the browser check — delete one sample, read the indicator.
+### Q-3 — setup honesty, in-app half *(done)*
+
+`App.renderSampleStatus()` now appends `<span class="sample-pack incomplete">Run: python app/download_samples.py</span>` to the status label when `PARTIAL` or `ERROR` occurs, making the fallback remedy clear directly in the UI.
 
 ### Q-2 — bytecode untracked *(done)*
 

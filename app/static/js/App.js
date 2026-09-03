@@ -239,10 +239,10 @@ class App {
             label.innerHTML = breakdown || 'Ready';
         } else if (status === 'partial') {
             indicator.classList.add('state-warn');
-            label.innerHTML = breakdown || 'Partially loaded';
+            label.innerHTML = `${breakdown || 'Partially loaded'}<span class="sample-pack incomplete">Run: python app/download_samples.py</span>`;
         } else {
             indicator.classList.add('state-error');
-            label.innerHTML = `${breakdown}<span class="sample-pack incomplete">Using synth fallback</span>`;
+            label.innerHTML = `${breakdown || 'Error'}<span class="sample-pack incomplete">Run: python app/download_samples.py</span>`;
         }
     }
 
