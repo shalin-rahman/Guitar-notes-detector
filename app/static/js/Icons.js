@@ -21,6 +21,7 @@ export const Icons = {
     // Strings crossing frets. Distinct from tab-player-screen, which keeps the music note.
     'fretboard-screen': `<svg viewBox="0 0 24 24" ${STROKE}><rect x="3" y="2" width="18" height="20" rx="2"/><line x1="9" y1="2" x2="9" y2="22"/><line x1="15" y1="2" x2="15" y2="22"/><line x1="3" y1="8" x2="21" y2="8"/><line x1="3" y1="15" x2="21" y2="15"/></svg>`,
     'circle-screen': `<svg viewBox="0 0 24 24" ${STROKE}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>`,
+    'tonnetz-screen': `<svg viewBox="0 0 24 24" ${STROKE}><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="12"/><line x1="12" y1="12" x2="22" y2="8.5"/><line x1="12" y1="12" x2="2" y2="8.5"/></svg>`,
     'ear-training-screen': `<svg viewBox="0 0 24 24" ${STROKE}><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>`,
     'practice-screen': `<svg viewBox="0 0 24 24" ${STROKE}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
     'lessons-screen': `<svg viewBox="0 0 24 24" ${STROKE}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,

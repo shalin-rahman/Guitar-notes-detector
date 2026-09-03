@@ -7,6 +7,7 @@ import FileManager from './FileManager.js';
 import AudioPlayer from './AudioPlayer.js';
 import FretboardManager from './FretboardManager.js';
 import CircleManager from './CircleManager.js';
+import TonnetzManager from './TonnetzManager.js';
 import Metronome from './Metronome.js';
 import StorageManager from './StorageManager.js';
 import BackingTrackEngine from './BackingTrackEngine.js';
@@ -149,6 +150,7 @@ class App {
         this.chordFretboard = new FretboardManager('chord-exp-fretboard');
         this.scaleFretboard = new FretboardManager('scale-exp-fretboard');
         this.circleManager = new CircleManager('circle-container', this);
+        this.tonnetzManager = null;
         this.player = null;
         this.backingEngine = null;
         this.earTraining = null; // initialized lazily on first visit
@@ -278,6 +280,12 @@ class App {
         if (stopAudio && this.sessionManager) this.sessionManager.stopAll();
 
         if (target === 'home-screen') this.updateDashboard();
+
+        // Lazy-init Tonnetz on first visit
+        if (target === 'tonnetz-screen' && !this.tonnetzManager) {
+            this.initAudioContext();
+            this.tonnetzManager = new TonnetzManager('tonnetz-svg-container', 'tonnetz-fretboard', this);
+        }
 
         // Lazy-init Ear Training on first visit
         if (target === 'ear-training-screen' && !this.earTraining) {
@@ -1487,6 +1495,11 @@ class App {
                         // Notify CircleManager for possible Quiz validation
                         if (this.circleManager) {
                             this.circleManager.handleDetectedNote(noteData.name);
+                        }
+                        
+                        // Notify TonnetzManager
+                        if (this.tonnetzManager) {
+                            this.tonnetzManager.onExternalNote(noteData.name);
                         }
                     }
 

@@ -35,6 +35,7 @@
                 <button class="nav-btn" data-target="scale-explorer-screen">Scale Explorer</button>
                 <button class="nav-btn" data-target="fretboard-screen">Interactive Fretboard</button>
                 <button class="nav-btn" data-target="circle-screen">Circle of Fifths</button>
+                <button class="nav-btn" data-target="tonnetz-screen">Harmonic Map</button>
 
                 <span class="nav-section-title">Training</span>
                 <button class="nav-btn" data-target="ear-training-screen">Ear Training</button>
@@ -539,6 +540,72 @@
                                 <button id="cof-play-scale" class="primary-btn small-btn" disabled><span class="btn-ico" data-icon="play"></span>Play Audio Sequence</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- TONNETZ SCREEN -->
+            <main class="screen" id="tonnetz-screen">
+                <div class="circle-page">
+                    <div class="fb-topbar">
+                        <div class="fb-title"><h2>Harmonic Map (Tonnetz)</h2></div>
+                    </div>
+                    <div class="circle-content-row">
+                        <div class="circle-container" id="tonnetz-svg-container"></div>
+                        <div class="circle-info-panel" id="tonnetz-info-panel">
+                            <h3 id="tz-info-chord-label">C</h3>
+                            
+                            <div class="settings-mini spacer-bottom-lg">
+                                <label for="tz-root-select">Key / Root:</label>
+                                <select id="tz-root-select" class="styled-input pointer">
+                                    <option value="0">C</option><option value="1">C# / Db</option><option value="2">D</option><option value="3">D# / Eb</option><option value="4">E</option><option value="5">F</option><option value="6">F# / Gb</option><option value="7">G</option><option value="8">G# / Ab</option><option value="9">A</option><option value="10">A# / Bb</option><option value="11">B</option>
+                                </select>
+                            </div>
+                            
+                            <div class="settings-mini spacer-bottom-lg">
+                                <label for="tz-chord-select">Show Chord:</label>
+                                <select id="tz-chord-select" class="styled-input pointer">
+                                    <option value="--">--</option>
+                                    <option value="Major">Major</option>
+                                    <option value="Minor">Minor</option>
+                                    <option value="Dom 7">Dom 7</option>
+                                    <option value="Maj 7">Maj 7</option>
+                                    <option value="Min 7">Min 7</option>
+                                    <option value="Dim">Diminished</option>
+                                    <option value="Aug">Augmented</option>
+                                </select>
+                            </div>
+
+                            <div class="settings-mini spacer-bottom-lg">
+                                <label for="tz-scale-select">Show Scale:</label>
+                                <select id="tz-scale-select" class="styled-input pointer">
+                                    <option value="--">--</option>
+                                    <option value="Major (Ionian)">Major (Ionian)</option>
+                                    <option value="Natural Minor">Natural Minor</option>
+                                    <option value="Pentatonic Major">Pentatonic Major</option>
+                                    <option value="Pentatonic Minor">Pentatonic Minor</option>
+                                </select>
+                            </div>
+
+                            <div class="theory-block spacer-bottom-lg">
+                                <p><strong>Note:</strong> <span id="tz-info-note">--</span></p>
+                                <p><strong>Interval:</strong> <span id="tz-info-interval">--</span></p>
+                                <p><strong>Fretboard:</strong> <span id="tz-info-position">--</span></p>
+                            </div>
+
+                            <div class="theory-block spacer-bottom-lg" id="tz-info-relations">
+                            </div>
+
+                            <div class="cof-actions spacer-top">
+                                <label class="checkbox-label compact centered"><input type="checkbox" id="tz-interval-toggle"> Show Intervals</label>
+                                <button id="tz-clear-btn" class="secondary-btn small-btn">Clear</button>
+                                <button id="tz-play-btn" class="primary-btn small-btn" disabled><span class="btn-ico" data-icon="play"></span>Play</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dash-card wide spacer-top">
+                        <div id="tonnetz-fretboard" class="fretboard-svg-container"></div>
                     </div>
                 </div>
             </main>
