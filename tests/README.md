@@ -15,8 +15,7 @@ Start the server first. The suites hardcode `http://127.0.0.1:8123`.
 `[Errno 10048]` means a server is already bound to that port. Check for a 200 rather than
 restarting.
 
-Then, **from the repository root** (several suites write screenshots to the current working
-directory, and the committed `shot_*.png` / `v_*.png` live at the root):
+Then, from anywhere — the suites resolve their own paths, so the working directory is free:
 
 ```
 python -X utf8 tests/qa_phase1.py       # 44 checks
@@ -28,6 +27,15 @@ python -X utf8 tests/qa_practice.py     # 20 checks
 python -X utf8 tests/qa_cof.py          # 20 checks
 python -X utf8 tests/qa_mic_session.py  # 18 checks
 ```
+
+## Screenshots
+
+Five suites (`qa_phase2`, `qa_verify`, `qa_tone`, `qa_tasks`, `qa_cof`) write PNGs to
+[`tests/screenshots/`](screenshots/), resolved from `__file__` rather than the CWD — that is
+`SHOTS` at the top of each of those files. The committed copies are the last accepted visual
+baseline; re-running a suite overwrites them in place, so `git diff --stat` on that directory
+is the visual-regression signal. They used to land at the repository root, which is why the
+run instruction above no longer pins a working directory.
 
 Each prints one line per check and a `N passed, M failed` summary. **They do not set an exit
 code** — read the summary line. `-X utf8` is required on Windows: the check marks are non-ASCII

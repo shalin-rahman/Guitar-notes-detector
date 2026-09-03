@@ -1,6 +1,11 @@
 """Settings -> Guitar Tone: both packs ship, the choice persists, and the two
 tones are actually different audio (not the same buffer under two names)."""
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+
+# Screenshots live beside the suites, not in the CWD, so the run location is free.
+SHOTS = Path(__file__).resolve().parent / "screenshots"
+SHOTS.mkdir(exist_ok=True)
 
 URL = "http://127.0.0.1:8123"
 results, errors, reqs = [], [], []
@@ -185,7 +190,7 @@ with sync_playwright() as p:
     check("no console errors", not real_errors, "; ".join(real_errors[:4]))
     page.locator(".nav-btn[data-target='home-screen']").first.click()
     page.wait_for_timeout(300)
-    page.screenshot(path="v_guitar_tone.png", full_page=False)
+    page.screenshot(path=str(SHOTS / "v_guitar_tone.png"), full_page=False)
     browser.close()
 
 print()

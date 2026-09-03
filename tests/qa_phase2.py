@@ -2,7 +2,12 @@
 plus screenshots of every screen for visual review.
 """
 import re
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+
+# Screenshots live beside the suites, not in the CWD, so the run location is free.
+SHOTS = Path(__file__).resolve().parent / "screenshots"
+SHOTS.mkdir(exist_ok=True)
 
 URL = "http://127.0.0.1:8123"
 SCREENS = [
@@ -118,7 +123,7 @@ with sync_playwright() as p:
         text = page.locator(f"#{s}").inner_text()
         found = sorted({c for c in text if is_pictograph(c)})
         check(f"{s}: no emoji in rendered text", not found, found)
-        page.screenshot(path=f"shot_{s}.png", full_page=True)
+        page.screenshot(path=str(SHOTS / f"shot_{s}.png"), full_page=True)
 
     check("no console errors beyond the known drum 404s",
           all("404" in e for e in errors), [e for e in errors if "404" not in e][:5])

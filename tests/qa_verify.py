@@ -7,7 +7,12 @@ Two things the existing suites cannot cover:
   B. The four CSS fixes (fretboard panels, sidebar nav, user guide, highlights)
      are geometry claims, so they are measured, not eyeballed.
 """
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+
+# Screenshots live beside the suites, not in the CWD, so the run location is free.
+SHOTS = Path(__file__).resolve().parent / "screenshots"
+SHOTS.mkdir(exist_ok=True)
 
 URL = "http://127.0.0.1:8123"
 DRUMS = ["kick", "snare", "hihat", "hihat-open", "ride"]
@@ -112,7 +117,7 @@ with sync_playwright() as p:
     tops = [round(g["top"]) for g in groups]
     check("panels sit on one row (3 columns, no implicit second row)",
           len(set(tops)) == 1, str(tops))
-    page.screenshot(path="v_fretboard_panels.png", full_page=False)
+    page.screenshot(path=str(SHOTS / "v_fretboard_panels.png"), full_page=False)
 
     # ---- B2. sidebar nav --------------------------------------------------
     # 12 live in .sidebar-nav; the 13th (Settings) sits in .sidebar-footer.
@@ -126,7 +131,7 @@ with sync_playwright() as p:
           page.locator(".nav-section-title").count() == 5)
     check(".sidebar-nav does not scroll", not nav_scrolls)
     check(".sidebar does not scroll", not sb_scrolls)
-    page.screenshot(path="v_sidebar.png", clip={"x": 0, "y": 0, "width": 260, "height": 1000})
+    page.screenshot(path=str(SHOTS / "v_sidebar.png"), clip={"x": 0, "y": 0, "width": 260, "height": 1000})
 
     # ---- B3. user guide, multiple sections expanded -----------------------
     page.locator(".nav-btn[data-target='guide-screen']").first.click()
@@ -154,7 +159,7 @@ with sync_playwright() as p:
         ".guide-page > *",
         "els => els.every(e => getComputedStyle(e).flexShrink === '0')")
     check("guide children pinned to content height (flex-shrink: 0)", guide_pinned)
-    page.screenshot(path="v_guide_expanded.png", full_page=False)
+    page.screenshot(path=str(SHOTS / "v_guide_expanded.png"), full_page=False)
 
     # ---- B4. fretboard highlight routing ----------------------------------
     # Only the visible board may take a flash; the other three must stay clean.
@@ -219,8 +224,8 @@ with sync_playwright() as p:
     check("CAGED panel populates", caged["btns"] > 0, str(caged))
     check("CAGED panel grows to fit its buttons", caged["h"] >= 60, str(caged))
     check("CAGED panel still does not scroll", not caged["scrolls"], str(caged))
-    page.screenshot(path="v_fretboard_panels_full.png", full_page=False)
-    page.screenshot(path="v_highlight.png", full_page=False)
+    page.screenshot(path=str(SHOTS / "v_fretboard_panels_full.png"), full_page=False)
+    page.screenshot(path=str(SHOTS / "v_highlight.png"), full_page=False)
 
     check("no console errors", not errors, [e for e in errors][:5])
     browser.close()

@@ -2,7 +2,12 @@
   1. aggregate sample-loading state (one line, per-pack, no loader overwriting the other)
   2. drum fallback -- all five voices must actually produce sound, no orphan nodes
 """
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+
+# Screenshots live beside the suites, not in the CWD, so the run location is free.
+SHOTS = Path(__file__).resolve().parent / "screenshots"
+SHOTS.mkdir(exist_ok=True)
 
 URL = "http://127.0.0.1:8123"
 DRUMS = ["kick", "snare", "hihat", "hihat-open", "ride"]
@@ -106,7 +111,7 @@ with sync_playwright() as p:
           all("404" in e or "Error loading" in e for e in errors),
           [e for e in errors if "404" not in e and "Error loading" not in e][:5])
 
-    page.screenshot(path="shot_topbar_status.png", clip={"x": 250, "y": 0, "width": 1250, "height": 46})
+    page.screenshot(path=str(SHOTS / "shot_topbar_status.png"), clip={"x": 250, "y": 0, "width": 1250, "height": 46})
     browser.close()
 
 print()

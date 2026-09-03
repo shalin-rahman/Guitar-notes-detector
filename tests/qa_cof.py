@@ -1,6 +1,11 @@
 """Circle-of-Fifths empty-state polish check: hint before a key is picked, real
 metadata after, and no orphaned section headings in either state."""
+from pathlib import Path
 from playwright.sync_api import sync_playwright
+
+# Screenshots live beside the suites, not in the CWD, so the run location is free.
+SHOTS = Path(__file__).resolve().parent / "screenshots"
+SHOTS.mkdir(exist_ok=True)
 
 URL = "http://127.0.0.1:8123/"
 passed = failed = 0
@@ -35,7 +40,7 @@ with sync_playwright() as p:
           not page.locator("#cof-positions-section").is_visible())
     check("empty state: no bare '--' rendered",
           "--" not in page.locator("#circle-info-panel").inner_text())
-    page.screenshot(path="shot_cof_empty.png")
+    page.screenshot(path=str(SHOTS / "shot_cof_empty.png"))
 
     # Pick a key on the wheel.
     page.locator(".cof-segment").first.click()
@@ -56,7 +61,7 @@ with sync_playwright() as p:
     check("after select: title is no longer 'Select a Key'",
           page.locator("#cof-key-title").inner_text().strip() != "Select a Key",
           page.locator("#cof-key-title").inner_text().strip())
-    page.screenshot(path="shot_cof_selected.png")
+    page.screenshot(path=str(SHOTS / "shot_cof_selected.png"))
 
     # Topbar metronome cluster: one row, grouped pill.
     mc = page.locator(".metronome-control")

@@ -56,5 +56,6 @@ benchmark existing behaviour, and prefer incremental integration over replacemen
 Browser-verify audio and UI changes; code inspection is not verification. Playwright with
 `channel="chrome"` (system Chrome — avoids the 150 MB download). Prove audio actually sounds
 with an `AnalyserNode` on `sessionManager.masterGain`, not a try/catch that didn't throw.
-The `qa_*.py` suites and the traps that produce false failures are documented in project
-memory (`verification-workflow`).
+The eight `qa_*.py` suites live in `tests/` — `tests/README.md` documents how to run them,
+what each covers, and the traps that produce false failures. Screenshots go to
+`tests/screenshots/`, never the repo root.

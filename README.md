@@ -35,7 +35,7 @@ Ahordian uses a custom **Normalized Autocorrelation Function (ACF)** with **Para
 The architecture is built on strict **SOLID/DRY** principles:
 * **Audio Engine:** Fully decoupled from the UI, allowing the DSP logic to be reused across different visualization modules. Everything audible routes through a single master chain (`instrument gains → master → compressor → destination`), so levels and mute are global rather than per-feature.
 * **One Audio Source At A Time:** `AudioSessionManager` owns exclusivity. Each engine registers a **stop callback**, and starting an exclusive session invokes the losers' callbacks — so "stopping" genuinely silences an engine instead of just changing a label. A **Now Playing** pill shows what is sounding and jumps you back to its screen. Microphone detection is deliberately *not* a session: it is input, not something you are listening to, so it has its own status badge and keeps running as you navigate.
-* **Sampled Instruments With Graceful Fallback:** The acoustic guitar plays real samples and falls back to synthesis if they are unavailable, so a fresh checkout is never silent. Drum WAVs are intentionally **not** bundled (see [`app/static/audio/LICENSES.md`](app/static/audio/LICENSES.md)) — the drum sampler synthesises until you supply a CC0 pack.
+* **Sampled Instruments With Graceful Fallback:** Every sample ships in the repository — 38 guitar MP3s (steel and nylon, 19 notes each) and 5 drum WAVs, about 1.5 MB in total — so a fresh checkout sounds like the demo with no download step. Both instruments still fall back to synthesis if a file is missing or fails to decode, and the fallback is not silent: the sample indicator reports partial or failed loading rather than pretending. Licences and attribution live in [`app/static/audio/LICENSES.md`](app/static/audio/LICENSES.md) — the drum kit is CC-BY 3.0, so shipping the attribution is a condition of the licence, not a courtesy.
 * **Rendering:** Coordinate-based SVG mapping ensures the fretboard is mathematically accurate to any scale or custom tuning. Icons are hydrated from a single `Icons.js` registry rather than scattered inline SVG.
 * **Backend:** A lightweight `FastAPI` instance handles local logging and environment stabilization.
 
@@ -51,11 +51,31 @@ The architecture is built on strict **SOLID/DRY** principles:
    ```bash
    python -m uvicorn app.main:app --reload --port 8000
    ```
-   (`python app/main.py` works too and binds the same port.)
+   (`python app/main.py` works too and binds the same port. The test suites hardcode
+   `http://127.0.0.1:8123`, so use `--port 8123` if you intend to run them.)
 3. **Explore:**
    Visit `http://localhost:8000`. Please allow microphone permissions, select your preferred notation (Sargam or Western), and enjoy your practice session!
 
-> **Note on drum samples:** the five drum WAVs are user-supplied by design and will 404 in a clean checkout. The app stays fully playable — `DrumSampler` synthesises the voices — but drop a CC0 kit into `app/static/audio/drums/` for the acoustic sound.
+### On the audio samples
+
+**There is no asset-download step.** All 44 files under [`app/static/audio/`](app/static/audio/) are tracked in the repository, so steps 1–3 above are the whole setup.
+
+`app/download_samples.py` is a **re-fetch tool, not a setup step**. It skips any file that already exists, which makes it a no-op on a clean checkout; run it only to repair assets you have deleted or corrupted:
+
+```bash
+python app/download_samples.py
+```
+
+If the sample indicator in the top bar reports partial or failed loading, that is the case it is for. After touching anything under `app/static/audio/`, update `LICENSES.md` and run `python .claude/skills/guitar-audio-intelligence/scripts/validate_audio_assets.py`.
+
+### Verifying a change
+
+The browser test suites are tracked in [`tests/`](tests/) and drive real Chrome through Playwright — see [`tests/README.md`](tests/README.md) for the run instructions, what each suite covers, and the traps that produce false failures.
+
+```bash
+python -m pip install playwright
+python -X utf8 tests/qa_phase1.py    # and the other seven suites
+```
 
 ---
 

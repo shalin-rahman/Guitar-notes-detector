@@ -9,22 +9,25 @@ browser download):
 
 ```
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8123
-python -X utf8 qa_phase1.py     # session lifecycle, replay, mute/volume, Now Playing
-python -X utf8 qa_phase2.py     # visual pass: 13 screens, no functional emoji
-python -X utf8 qa_tasks.py      # aggregate sample status, all 5 drum voices audible
-python -X utf8 qa_verify.py     # synth fallback direct, panel/nav/guide geometry, highlight routing
-python -X utf8 qa_tone.py       # Settings -> Guitar Tone: both packs, lazy load, persistence
-python -X utf8 qa_practice.py   # practice routine cards, no uninterpolated ${...}, nav round-trip
+python -X utf8 tests/qa_phase1.py      # session lifecycle, replay, mute/volume, Now Playing
+python -X utf8 tests/qa_phase2.py      # visual pass: 13 screens, no functional emoji
+python -X utf8 tests/qa_tasks.py       # aggregate sample status, all 5 drum voices audible
+python -X utf8 tests/qa_verify.py      # synth fallback direct, panel/nav/guide geometry, highlight routing
+python -X utf8 tests/qa_tone.py        # Settings -> Guitar Tone: both packs, lazy load, persistence
+python -X utf8 tests/qa_practice.py    # practice routine cards, no uninterpolated ${...}, nav round-trip
+python -X utf8 tests/qa_cof.py         # Circle of Fifths empty state, topbar cluster, nav glyphs
+python -X utf8 tests/qa_mic_session.py # mic raises no session, survives nav, Stop ends the tracks
 ```
 
-The `qa_*.py` scripts are **not tracked in this repo** — they live in the Claude Code
-session scratchpad. Copy them next to the repo root before running. Scratchpads purge after
-30 days, and every token estimate below assumes this harness exists; committing the six
-suites under `tests/` is the cheapest way to stop the numbers going stale.
+The suites are **tracked in `tests/`** as of Q-1 — see [`tests/README.md`](tests/README.md)
+for setup, per-suite coverage and the known traps. They no longer live only in a Claude Code
+scratchpad, which purges after 30 days and would have taken every "verified in a browser"
+claim below with it. Screenshot-writing suites resolve their output from `__file__` into
+`tests/screenshots/`, so the working directory no longer matters.
 
 Current results: **qa_phase1 44/44**, **qa_phase2 30/30**, **qa_tasks 15/15**,
-**qa_verify 30/30**, **qa_tone 25/25**, **qa_practice 20/20** — 164 checks across six
-suites, no known failures.
+**qa_verify 30/30**, **qa_tone 25/25**, **qa_practice 20/20**, **qa_cof 20/20**,
+**qa_mic_session 18/18** — 202 checks across eight suites, no known failures.
 
 Two harness bugs were fixed to get there, both stale assertions rather than product
 defects: qa_phase1 hardcoded a 6-sample guitar pack (now 19), and qa_tasks measured the
@@ -305,8 +308,9 @@ A related source-order trap: `.is-hidden` (style.css:1569) comes *before* `.samp
 (1584), so at equal specificity the later rule wins and `.sample-status.is-hidden` is
 required.
 
-*Verified:* qa_phase2 30/30, and the re-taken `shot_fretboard-screen.png` /
-`shot_topbar_status.png` confirm a single-row topbar and correct label spacing.
+*Verified:* qa_phase2 30/30, and the re-taken `tests/screenshots/shot_fretboard-screen.png` /
+`tests/screenshots/shot_topbar_status.png` confirm a single-row topbar and correct label
+spacing.
 
 ---
 
@@ -454,11 +458,12 @@ should follow the model that constrains its shape rather than lead it.
 
 ## Open — Group Q: Reproducibility and setup honesty
 
-**The gap.** The 164 checks above are the only evidence that anything in "Done" is actually
-done, and they exist in exactly one place: a Claude Code session scratchpad that purges after
-30 days. Nobody else can reproduce them, and once they're gone every "verified in a browser"
-claim in this document becomes unfalsifiable. That is the single largest risk in the repo — it
-is not a feature gap, it is the plan losing its own foundation.
+**The gap (Q-1, closed 2026-08-04).** The checks above were the only evidence that anything in
+"Done" is actually done, and they existed in exactly one place: a Claude Code session
+scratchpad that purges after 30 days. Nobody else could reproduce them, and once they were gone
+every "verified in a browser" claim in this document became unfalsifiable. That was the single
+largest risk in the repo — not a feature gap, the plan losing its own foundation. All eight
+suites are now tracked under `tests/`.
 
 A code review on 2026-08-04 also claimed the audio samples were not committed and that setup
 required `python app/download_samples.py`. **That claim was wrong** — all 44 files
@@ -469,13 +474,51 @@ nothing in the repo says otherwise. Q-3 exists so the next reader does not repea
 
 | # | Task | Effort | Tokens | Depends on |
 |---|---|---|---|---|
-| Q-1 | **Commit the six `qa_*.py` suites under `tests/`** with their existing names — `qa_phase1`, `qa_phase2`, `qa_tasks`, `qa_verify`, `qa_tone`, `qa_practice` — plus a short `tests/README.md` giving the server command and each suite's expected count. Keep the names: renaming breaks the mapping between a file and its documented pass count, and the natural-looking splits (`qa_audio`/`qa_ui`/…) do not match how the suites are actually organised — `qa_phase2` is 13 screens of visual assertions across every feature, `qa_verify` mixes synth fallback, panel geometry, nav and highlight routing. One confirming run after the move; no new assertions. | 1 h | 15–25k | — |
-| Q-2 | **Stop tracking bytecode.** Two `app/__pycache__/*.pyc` files are tracked; `.gitignore` covers `.venv/` but has no `__pycache__/` entry. Add it and `git rm --cached` the two files. | 10 min | 3–5k | — |
-| Q-3 | **Say what setup actually is.** README states that a fresh checkout already contains every sample and that `download_samples.py` is *re-fetch if assets are missing or corrupt*, explicitly not a required step. Then make the missing-asset path name its own remedy: `SampleStatus.PARTIAL` / `ERROR` already reach the UI through `onStatusChange` → `App.renderSampleStatus()`, so the fallback is not silent, but the text is generic where it could say *run `python app/download_samples.py`*. Browser-verify by removing one sample and reading the indicator. | 1 h | 20–30k | — |
+| Q-1 | **Commit the `qa_*.py` suites under `tests/`** with their existing names — `qa_phase1`, `qa_phase2`, `qa_tasks`, `qa_verify`, `qa_tone`, `qa_practice`, and (found during the move) `qa_cof`, `qa_mic_session` — plus a short `tests/README.md` giving the server command and each suite's expected count. Keep the names: renaming breaks the mapping between a file and its documented pass count, and the natural-looking splits (`qa_audio`/`qa_ui`/…) do not match how the suites are actually organised — `qa_phase2` is 13 screens of visual assertions across every feature, `qa_verify` mixes synth fallback, panel geometry, nav and highlight routing. One confirming run after the move; no new assertions. | done | ~20k | — |
+| Q-2 | **Stop tracking bytecode.** Two `app/__pycache__/*.pyc` files are tracked; `.gitignore` covers `.venv/` but has no `__pycache__/` entry. Add it and `git rm --cached` the two files. | done | ~4k | — |
+| Q-3 | **Say what setup actually is.** README states that a fresh checkout already contains every sample and that `download_samples.py` is *re-fetch if assets are missing or corrupt*, explicitly not a required step. Then make the missing-asset path name its own remedy: `SampleStatus.PARTIAL` / `ERROR` already reach the UI through `onStatusChange` → `App.renderSampleStatus()`, so the fallback is not silent, but the text is generic where it could say *run `python app/download_samples.py`*. Browser-verify by removing one sample and reading the indicator. | **README half done**; UI text remains | 10–15k left | — |
 | Q-4 | **CI, if wanted.** Only after Q-1, and not free: the suites drive real Chrome via `channel="chrome"` and assert audio levels through an `AnalyserNode`, so a runner needs system Chrome *and* an audio device, and the timing-sensitive checks (the ~2.5 s settling gap) are the classic shared-runner flake. Expect to quarantine the audio-level assertions and run the geometry/nav ones green first. | 2–3 h | 40–60k | Q-1 |
 
-Q-1 → Q-2 → Q-3 are independent of each other and of Group P, and Q-1 should go first
-regardless of what else is queued — it is ~1 h against a 30-day expiry.
+**Q-1 and Q-2 are done** (2026-08-04) — see below. Q-3 and Q-4 remain, and both are
+independent of Group P.
+
+### Q-1 — suites committed *(done)*
+
+Eight suites live in `tests/`, not six: `qa_cof` (20) and `qa_mic_session` (18) were written
+after the 164-check figure was recorded and bring the total to **202**. Two scratchpads held
+divergent copies of `qa_phase1` and `qa_tasks`; the newer of each was taken by mtime, and
+`qa_phase2` was byte-identical in both. No assertions were changed. `tests/README.md` carries
+the server command, per-suite coverage, the `-X utf8` requirement on Windows, the deliberate
+absence of `playwright install`, and the traps that produce false failures.
+
+### Q-1a — screenshots moved out of the repo root *(done)*
+
+20 tracked `shot_*.png` / `v_*.png` were sitting at the repository root because five suites
+wrote them CWD-relative. They are now `git mv`-ed to `tests/screenshots/`, and each of those
+suites resolves `SHOTS` from `__file__`, so the run location is free and re-running a suite
+overwrites its baseline in place — `git diff --stat tests/screenshots` is the visual-regression
+signal. *Verified:* `qa_cof` run from an unrelated working directory, 20/20, zero PNGs written
+to the CWD.
+
+### Q-3 — setup honesty, README half *(done)*
+
+Two README claims were false as of `a063715` and have been corrected: the Technical Hardening
+bullet said drum WAVs are "intentionally **not** bundled … until you supply a CC0 pack", and a
+closing blockquote said the five WAVs "will 404 in a clean checkout". All 44 files ship. The
+README now states that there is no asset-download step, that `download_samples.py` is a
+re-fetch tool that no-ops on a clean checkout, that the drum kit is CC-BY 3.0 and its
+attribution is a licence condition, and it points at `tests/` for verification. It also flags
+that the documented port (8000) is not the port the suites hardcode (8123).
+
+**Still open:** the in-app half. `App.renderSampleStatus()` reports `PARTIAL` / `ERROR`
+generically where it could name the remedy (`python app/download_samples.py`), and that needs
+the browser check — delete one sample, read the indicator.
+
+### Q-2 — bytecode untracked *(done)*
+
+`__pycache__/` and `*.py[cod]` added to `.gitignore`; the two tracked
+`app/__pycache__/*.pyc` removed with `git rm --cached`. *Verified:* `git ls-files | grep -c
+pycache` → 0.
 
 ---
 
